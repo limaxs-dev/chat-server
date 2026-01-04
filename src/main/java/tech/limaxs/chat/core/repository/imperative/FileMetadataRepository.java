@@ -21,7 +21,7 @@ public class FileMetadataRepository implements PanacheRepositoryBase<FileMetadat
     }
 
     public List<FileMetadata> findUnconfirmedOlderThan(LocalDateTime threshold) {
-        return list("isConfirmed = false AND createdAt < ?1", threshold);
+        return list("confirmed = false AND createdAt < ?1", threshold);
     }
 
     public List<FileMetadata> findExpiredFiles(LocalDateTime threshold) {
