@@ -27,17 +27,17 @@ public class JWTGenerator {
     public static void main(String[] args) {
         try {
             // Generate tokens for test users
-            generateAndPrintToken("550e8400-e29b-41d4-a716-446655440000", "Alice", "test-tenant");
-            generateAndPrintToken("550e8400-e29b-41d4-a716-446655440001", "Bob", "test-tenant");
-            generateAndPrintToken("550e8400-e29b-41d4-a716-446655440002", "Charlie", "test-tenant");
-            generateAndPrintToken("550e8400-e29b-41d4-a716-446655440003", "Diana", "test-tenant");
+            generateAndPrintToken("550e8400-e29b-41d4-a716-446655440000", "Alice");
+            generateAndPrintToken("550e8400-e29b-41d4-a716-446655440001", "Bob");
+            generateAndPrintToken("550e8400-e29b-41d4-a716-446655440002", "Charlie");
+            generateAndPrintToken("550e8400-e29b-41d4-a716-446655440003", "Diana");
         } catch (Exception e) {
             System.err.println("Error generating JWT: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    public static String generateToken(String userId, String name, String tenantId) throws Exception {
+    public static String generateToken(String userId, String name) throws Exception {
         PrivateKey privateKey = loadPrivateKey();
 
         Date now = new Date();
@@ -46,21 +46,19 @@ public class JWTGenerator {
         return Jwts.builder()
                 .subject(userId)
                 .claim("name", name)
-                .claim("tenantId", tenantId)  // Store tenantId as a claim instead of issuer
-                .issuer("nexus-chat-engine")   // Use fixed issuer matching mp.jwt.verify.issuer
+                .issuer("nexus-chat-engine")
                 .issuedAt(now)
                 .expiration(exp)
                 .signWith(privateKey, Jwts.SIG.RS256)
                 .compact();
     }
 
-    public static void generateAndPrintToken(String userId, String name, String tenantId) throws Exception {
-        String token = generateToken(userId, name, tenantId);
+    public static void generateAndPrintToken(String userId, String name) throws Exception {
+        String token = generateToken(userId, name);
 
         System.out.println("========================================");
         System.out.println("User: " + name);
         System.out.println("User ID: " + userId);
-        System.out.println("Tenant: " + tenantId);
         System.out.println("========================================");
         System.out.println("JWT Token:");
         System.out.println(token);

@@ -46,17 +46,17 @@ export default function(data) {
 
   const uploadUrlParams = `fileName=${encodeURIComponent(fileName)}&fileSize=${fileSize}&contentType=${encodeURIComponent(contentType)}`;
   const uploadUrlRes = http.post(
-    `${baseUrl}${config.endpoints.uploadUrl}?${uploadUrlParams}`,
+    `${baseUrl}${config.endpoints.backUploadUrl}?${uploadUrlParams}`,
     null,
     { headers: createAuthHeaders(aliceToken) }
   );
 
   check(uploadUrlRes, {
-    'POST /api/files/upload-url (PDF) - Status 200': (r) => r.status === 200,
-    'POST /api/files/upload-url (PDF) - Has fileId': (r) => JSON.parse(r.body).fileId !== undefined,
-    'POST /api/files/upload-url (PDF) - Has uploadUrl': (r) => JSON.parse(r.body).uploadUrl !== undefined,
-    'POST /api/files/upload-url (PDF) - Has objectKey': (r) => JSON.parse(r.body).objectKey !== undefined,
-    'POST /api/files/upload-url (PDF) - Valid UUID fileId': (r) => {
+    'POST /api/back/files/upload-url (PDF) - Status 200': (r) => r.status === 200,
+    'POST /api/back/files/upload-url (PDF) - Has fileId': (r) => JSON.parse(r.body).fileId !== undefined,
+    'POST /api/back/files/upload-url (PDF) - Has uploadUrl': (r) => JSON.parse(r.body).uploadUrl !== undefined,
+    'POST /api/back/files/upload-url (PDF) - Has objectKey': (r) => JSON.parse(r.body).objectKey !== undefined,
+    'POST /api/back/files/upload-url (PDF) - Valid UUID fileId': (r) => {
       const fileId = JSON.parse(r.body).fileId;
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       return uuidRegex.test(fileId);
@@ -104,13 +104,13 @@ export default function(data) {
   console.log('\n=== Test 3: Confirm Upload (PDF) ===');
 
   const confirmUploadRes = http.post(
-    `${baseUrl}${config.endpoints.confirmUpload(pdfFileId)}`,
+    `${baseUrl}${config.endpoints.backConfirmUpload(pdfFileId)}`,
     '',
     { headers: createAuthHeaders(aliceToken) }
   );
 
   check(confirmUploadRes, {
-    'POST /api/files/{fileId}/confirm - Status 204': (r) => r.status === 204,
+    'POST /api/back/files/{fileId}/confirm - Status 204': (r) => r.status === 204,
   });
 
   console.log('PDF upload confirmed');
@@ -123,17 +123,17 @@ export default function(data) {
   console.log('\n=== Test 4: Get Download URL (PDF) ===');
 
   const downloadUrlRes = http.get(
-    `${baseUrl}${config.endpoints.downloadUrl(pdfFileId)}`,
+    `${baseUrl}${config.endpoints.frontDownloadUrl(pdfFileId)}`,
     { headers: createAuthHeaders(aliceToken) }
   );
 
   check(downloadUrlRes, {
-    'GET /api/files/{fileId}/download-url - Status 200': (r) => r.status === 200,
-    'GET /api/files/{fileId}/download-url - Has downloadUrl': (r) => {
+    'GET /api/front/files/{fileId}/download-url - Status 200': (r) => r.status === 200,
+    'GET /api/front/files/{fileId}/download-url - Has downloadUrl': (r) => {
       const body = JSON.parse(r.body);
       return body.downloadUrl !== undefined;
     },
-    'GET /api/files/{fileId}/download-url - Valid URL format': (r) => {
+    'GET /api/front/files/{fileId}/download-url - Valid URL format': (r) => {
       const body = JSON.parse(r.body);
       return body.downloadUrl.startsWith('http://') || body.downloadUrl.startsWith('https://');
     },
@@ -155,14 +155,14 @@ export default function(data) {
 
   const imageUploadUrlParams = `fileName=${encodeURIComponent(imageFileName)}&fileSize=${imageFileSize}&contentType=${encodeURIComponent(imageContentType)}`;
   const imageUploadUrlRes = http.post(
-    `${baseUrl}${config.endpoints.uploadUrl}?${imageUploadUrlParams}`,
+    `${baseUrl}${config.endpoints.backUploadUrl}?${imageUploadUrlParams}`,
     null,
     { headers: createAuthHeaders(aliceToken) }
   );
 
   check(imageUploadUrlRes, {
-    'POST /api/files/upload-url (PNG) - Status 200': (r) => r.status === 200,
-    'POST /api/files/upload-url (PNG) - Has fileId': (r) => JSON.parse(r.body).fileId !== undefined,
+    'POST /api/back/files/upload-url (PNG) - Status 200': (r) => r.status === 200,
+    'POST /api/back/files/upload-url (PNG) - Has fileId': (r) => JSON.parse(r.body).fileId !== undefined,
   });
 
   const imageData = JSON.parse(imageUploadUrlRes.body);
@@ -178,13 +178,13 @@ export default function(data) {
   console.log('\n=== Test 6: Confirm Upload (Image) ===');
 
   const confirmImageUploadRes = http.post(
-    `${baseUrl}${config.endpoints.confirmUpload(imageFileId)}`,
+    `${baseUrl}${config.endpoints.backConfirmUpload(imageFileId)}`,
     '',
     { headers: createAuthHeaders(aliceToken) }
   );
 
   check(confirmImageUploadRes, {
-    'POST /api/files/{fileId}/confirm (image) - Status 204': (r) => r.status === 204,
+    'POST /api/back/files/{fileId}/confirm (image) - Status 204': (r) => r.status === 204,
   });
 
   console.log('Image upload confirmed');
@@ -202,14 +202,14 @@ export default function(data) {
 
   const videoUploadUrlParams = `fileName=${encodeURIComponent(videoFileName)}&fileSize=${videoFileSize}&contentType=${encodeURIComponent(videoContentType)}`;
   const videoUploadUrlRes = http.post(
-    `${baseUrl}${config.endpoints.uploadUrl}?${videoUploadUrlParams}`,
+    `${baseUrl}${config.endpoints.backUploadUrl}?${videoUploadUrlParams}`,
     null,
     { headers: createAuthHeaders(aliceToken) }
   );
 
   check(videoUploadUrlRes, {
-    'POST /api/files/upload-url (MP4) - Status 200': (r) => r.status === 200,
-    'POST /api/files/upload-url (MP4) - Has fileId': (r) => JSON.parse(r.body).fileId !== undefined,
+    'POST /api/back/files/upload-url (MP4) - Status 200': (r) => r.status === 200,
+    'POST /api/back/files/upload-url (MP4) - Has fileId': (r) => JSON.parse(r.body).fileId !== undefined,
   });
 
   const videoData = JSON.parse(videoUploadUrlRes.body);
@@ -225,13 +225,13 @@ export default function(data) {
   console.log('\n=== Test 8: Confirm Upload (Video) ===');
 
   const confirmVideoUploadRes = http.post(
-    `${baseUrl}${config.endpoints.confirmUpload(videoFileId)}`,
+    `${baseUrl}${config.endpoints.backConfirmUpload(videoFileId)}`,
     '',
     { headers: createAuthHeaders(aliceToken) }
   );
 
   check(confirmVideoUploadRes, {
-    'POST /api/files/{fileId}/confirm (video) - Status 204': (r) => r.status === 204,
+    'POST /api/back/files/{fileId}/confirm (video) - Status 204': (r) => r.status === 204,
   });
 
   console.log('Video upload confirmed');
@@ -244,21 +244,21 @@ export default function(data) {
   console.log('\n=== Test 9: Get Download URL for all files ===');
 
   const imageDownloadUrlRes = http.get(
-    `${baseUrl}${config.endpoints.downloadUrl(imageFileId)}`,
+    `${baseUrl}${config.endpoints.frontDownloadUrl(imageFileId)}`,
     { headers: createAuthHeaders(aliceToken) }
   );
 
   const videoDownloadUrlRes = http.get(
-    `${baseUrl}${config.endpoints.downloadUrl(videoFileId)}`,
+    `${baseUrl}${config.endpoints.frontDownloadUrl(videoFileId)}`,
     { headers: createAuthHeaders(aliceToken) }
   );
 
   check(imageDownloadUrlRes, {
-    'GET /api/files/{fileId}/download-url (image) - Status 200': (r) => r.status === 200,
+    'GET /api/front/files/{fileId}/download-url (image) - Status 200': (r) => r.status === 200,
   });
 
   check(videoDownloadUrlRes, {
-    'GET /api/files/{fileId}/download-url (video) - Status 200': (r) => r.status === 200,
+    'GET /api/front/files/{fileId}/download-url (video) - Status 200': (r) => r.status === 200,
   });
 
   console.log('All download URLs retrieved successfully');
@@ -276,13 +276,13 @@ export default function(data) {
 
   const hugeUploadUrlParams = `fileName=${encodeURIComponent(hugeFileName)}&fileSize=${hugeFileSize}&contentType=${encodeURIComponent(hugeContentType)}`;
   const hugeUploadUrlRes = http.post(
-    `${baseUrl}${config.endpoints.uploadUrl}?${hugeUploadUrlParams}`,
+    `${baseUrl}${config.endpoints.backUploadUrl}?${hugeUploadUrlParams}`,
     null,
     { headers: createAuthHeaders(aliceToken) }
   );
 
   check(hugeUploadUrlRes, {
-    'POST /api/files/upload-url (huge) - Status 400 or 413': (r) => r.status === 400 || r.status === 413,
+    'POST /api/back/files/upload-url (huge) - Status 400 or 413': (r) => r.status === 400 || r.status === 413,
   });
 
   console.log('Large file rejected:', hugeUploadUrlRes.status);
@@ -300,7 +300,7 @@ export default function(data) {
 
   const invalidUploadUrlParams = `fileName=${encodeURIComponent(invalidFileName)}&fileSize=${invalidFileSize}&contentType=${encodeURIComponent(invalidContentType)}`;
   const invalidUploadUrlRes = http.post(
-    `${baseUrl}${config.endpoints.uploadUrl}?${invalidUploadUrlParams}`,
+    `${baseUrl}${config.endpoints.backUploadUrl}?${invalidUploadUrlParams}`,
     null,
     { headers: createAuthHeaders(aliceToken) }
   );
@@ -317,12 +317,12 @@ export default function(data) {
 
   const fakeFileId = generateUUID();
   const fakeFileDownloadRes = http.get(
-    `${baseUrl}${config.endpoints.downloadUrl(fakeFileId)}`,
+    `${baseUrl}${config.endpoints.frontDownloadUrl(fakeFileId)}`,
     { headers: createAuthHeaders(aliceToken) }
   );
 
   check(fakeFileDownloadRes, {
-    'GET /api/files/{fakeFileId}/download-url - Status 404': (r) => r.status === 404,
+    'GET /api/front/files/{fakeFileId}/download-url - Status 404': (r) => r.status === 404,
   });
 
   console.log('Non-existent file ID response:', fakeFileDownloadRes.status);
@@ -333,12 +333,12 @@ export default function(data) {
   console.log('\n=== Test 13: Unauthorized access (no token) ===');
 
   const noTokenUploadRes = http.post(
-    `${baseUrl}${config.endpoints.uploadUrl}?fileName=test.pdf&fileSize=1024&contentType=application/pdf`,
+    `${baseUrl}${config.endpoints.backUploadUrl}?fileName=test.pdf&fileSize=1024&contentType=application/pdf`,
     null
   );
 
   check(noTokenUploadRes, {
-    'POST /api/files/upload-url (no token) - Status 401': (r) => r.status === 401,
+    'POST /api/back/files/upload-url (no token) - Status 401': (r) => r.status === 401,
   });
 
   console.log('No token response:', noTokenUploadRes.status);
@@ -359,7 +359,7 @@ export default function(data) {
 
     const batchUploadUrlParams = `fileName=${encodeURIComponent(fileName)}&fileSize=${fileSize}&contentType=${encodeURIComponent(contentType)}`;
     const batchUploadUrlRes = http.post(
-      `${baseUrl}${config.endpoints.uploadUrl}?${batchUploadUrlParams}`,
+      `${baseUrl}${config.endpoints.backUploadUrl}?${batchUploadUrlParams}`,
       null,
       { headers: createAuthHeaders(aliceToken) }
     );
@@ -370,7 +370,7 @@ export default function(data) {
 
       // Confirm upload
       http.post(
-        `${baseUrl}${config.endpoints.confirmUpload(batchData.fileId)}`,
+        `${baseUrl}${config.endpoints.backConfirmUpload(batchData.fileId)}`,
         '',
         { headers: createAuthHeaders(aliceToken) }
       );

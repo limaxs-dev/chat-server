@@ -13,7 +13,9 @@ export const options = {
   iterations: 1,
   thresholds: {
     http_req_duration: ['p(95)<1000'],
-    http_req_failed: ['rate<0.01'],
+    // Note: http_req_failed threshold is removed because PHASE 9 tests
+    // intentionally trigger 404/401 responses to verify error handling.
+    // Those "failures" are expected and test that proper error responses are returned.
   },
 };
 
@@ -55,7 +57,7 @@ export default function(data) {
   console.log('\n--- PHASE 1: AUTHENTICATION ---');
 
   const tokenRes = http.get(
-    `${baseUrl}${config.endpoints.token}/${config.users.alice.id}?name=${config.users.alice.name}&tenant=${config.users.alice.tenant}`
+    `${baseUrl}${config.endpoints.token}/${config.users.alice.id}?name=${config.users.alice.name}`
   );
 
   check(tokenRes, {
@@ -75,7 +77,7 @@ export default function(data) {
 
   // 2.1: List existing rooms
   const listRoomsRes = http.get(
-    `${baseUrl}${config.endpoints.rooms}?page=0&size=20`,
+    `${baseUrl}${config.endpoints.frontRooms}?page=0&size=20`,
     { headers: createAuthHeaders(data.aliceToken) }
   );
 
@@ -92,7 +94,7 @@ export default function(data) {
   // 2.2: Create a new GROUP room
   const newRoomName = 'Integration Test Room ' + Date.now();
   const createRoomRes = http.post(
-    `${baseUrl}${config.endpoints.rooms}`,
+    `${baseUrl}${config.endpoints.backRooms}`,
     JSON.stringify({
       type: config.roomTypes.GROUP,
       name: newRoomName,
@@ -114,7 +116,7 @@ export default function(data) {
 
   // 2.3: Get the newly created room
   const getRoomRes = http.get(
-    `${baseUrl}${config.endpoints.rooms}/${testState.newRoomId}`,
+    `${baseUrl}${config.endpoints.frontRooms}/${testState.newRoomId}`,
     { headers: createAuthHeaders(data.aliceToken) }
   );
 
@@ -137,7 +139,7 @@ export default function(data) {
   const imageContentType = 'image/png';
 
   const uploadUrlRes = http.post(
-    `${baseUrl}${config.endpoints.uploadUrl}?fileName=${encodeURIComponent(imageFileName)}&fileSize=${imageFileSize}&contentType=${encodeURIComponent(imageContentType)}`,
+    `${baseUrl}${config.endpoints.backUploadUrl}?fileName=${encodeURIComponent(imageFileName)}&fileSize=${imageFileSize}&contentType=${encodeURIComponent(imageContentType)}`,
     null,
     { headers: createAuthHeaders(data.aliceToken) }
   );
@@ -156,7 +158,7 @@ export default function(data) {
 
   // Confirm upload (simulated)
   const confirmUploadRes = http.post(
-    `${baseUrl}${config.endpoints.confirmUpload(testState.uploadedFileId)}`,
+    `${baseUrl}${config.endpoints.backConfirmUpload(testState.uploadedFileId)}`,
     '',
     { headers: createAuthHeaders(data.aliceToken) }
   );
@@ -177,7 +179,7 @@ export default function(data) {
   // 4.1: Send a text message
   const clientRef = generateUUID();
   const textMessageRes = http.post(
-    `${baseUrl}${config.endpoints.messages}`,
+    `${baseUrl}${config.endpoints.backMessages}`,
     JSON.stringify({
       roomId: testState.newRoomId,
       type: config.messageTypes.TEXT,
@@ -201,7 +203,7 @@ export default function(data) {
 
   // 4.2: Send an image message (referencing uploaded file)
   const imageMessageRes = http.post(
-    `${baseUrl}${config.endpoints.messages}`,
+    `${baseUrl}${config.endpoints.backMessages}`,
     JSON.stringify({
       roomId: testState.newRoomId,
       type: config.messageTypes.IMAGE,
@@ -224,7 +226,7 @@ export default function(data) {
 
   // 4.3: Get messages from the room
   const getMessagesRes = http.get(
-    `${baseUrl}${config.endpoints.messages}/${testState.newRoomId}?page=0&size=10`,
+    `${baseUrl}${config.endpoints.frontMessages}/${testState.newRoomId}?page=0&size=10`,
     { headers: createAuthHeaders(data.aliceToken) }
   );
 
@@ -246,6 +248,8 @@ export default function(data) {
   // PHASE 5: WEBSOCKET CONNECTION
   // ========================================================================
   console.log('\n--- PHASE 5: WEBSOCKET CONNECTION ---');
+
+  let wsClosed = false;
 
   const wsRes = ws.connect(wsUrl, {}, function (socket) {
     testState.wsConnected = true;
@@ -276,6 +280,17 @@ export default function(data) {
       testState.wsMessages.push(msg);
       console.log('[WS] Received event:', msg.event);
 
+      // Verify PRESENCE event
+      if (msg.event === 'PRESENCE') {
+        check(msg, {
+          '[WS] PRESENCE - Has data': (m) => m.data !== undefined,
+          '[WS] PRESENCE - Has userId': (m) => m.data.userId !== undefined,
+          '[WS] PRESENCE - Has userName': (m) => m.data.userName !== undefined,
+          '[WS] PRESENCE - Has status': (m) => m.data.status !== undefined,
+        });
+        console.log('[WS] PRESENCE - User', msg.data.userName, 'is', msg.data.status);
+      }
+
       // Verify message structure
       if (msg.event === config.events.NEW_MESSAGE) {
         check(msg, {
@@ -283,17 +298,22 @@ export default function(data) {
           '[WS] NEW_MESSAGE - Has senderId': (m) => m.data.senderId !== undefined,
         });
       }
+
+      // Close connection after receiving at least 1 message
+      if (testState.wsMessages.length >= 1 && !wsClosed) {
+        wsClosed = true;
+        console.log('[WS] Closing connection after receiving messages');
+        socket.close(1000, 'Test complete');
+      }
+    });
+
+    socket.on('close', () => {
+      console.log('[WS] Connection closed');
     });
 
     socket.on('error', (error) => {
       console.error('[WS] Error:', error);
     });
-
-    // Close connection after 5 seconds
-    setTimeout(() => {
-      console.log('[WS] Closing connection');
-      socket.close();
-    }, 5000);
   });
 
   check(wsRes, {
@@ -302,7 +322,7 @@ export default function(data) {
   });
 
   // Wait for WebSocket messages
-  sleep(7);
+  sleep(3);
 
   // Verify WebSocket received messages
   check(testState.wsMessages, {
@@ -311,7 +331,7 @@ export default function(data) {
       return testState.wsMessages.some(m => m.event === config.events.NEW_MESSAGE);
     },
     '[WS] Received - PRESENCE event': () => {
-      return testState.wsMessages.some(m => m.event === config.events.PRESENCE);
+      return testState.wsMessages.some(m => m.event === 'PRESENCE');
     },
   });
 
@@ -325,9 +345,14 @@ export default function(data) {
   // ========================================================================
   console.log('\n--- PHASE 6: TYPING INDICATOR ---');
 
+  let typingWsClosed = false;
+  let typingMessagesReceived = [];
+
   const ws2Res = ws.connect(wsUrl, {}, function (socket) {
     socket.on('open', () => {
-      // Send typing indicator
+      console.log('[TYPING] Connection opened');
+
+      // Send typing indicator (start)
       const typingMessage = {
         event: config.events.TYPING,
         traceId: generateUUID(),
@@ -338,32 +363,40 @@ export default function(data) {
       };
 
       socket.send(JSON.stringify(typingMessage));
-      console.log('[TYPING] Sent typing indicator');
+      console.log('[TYPING] Sent typing indicator (isTyping=true)');
 
-      // Send stop typing after 1 second
-      setTimeout(() => {
-        const stopTypingMessage = {
-          event: config.events.TYPING,
-          traceId: generateUUID(),
-          data: {
-            roomId: testState.newRoomId,
-            isTyping: false
-          }
-        };
+      // Send stop typing indicator immediately
+      const stopTypingMessage = {
+        event: config.events.TYPING,
+        traceId: generateUUID(),
+        data: {
+          roomId: testState.newRoomId,
+          isTyping: false
+        }
+      };
 
-        socket.send(JSON.stringify(stopTypingMessage));
-        console.log('[TYPING] Sent stop typing');
-      }, 1000);
-
-      // Close connection
-      setTimeout(() => socket.close(), 2000);
+      socket.send(JSON.stringify(stopTypingMessage));
+      console.log('[TYPING] Sent typing indicator (isTyping=false)');
     });
 
     socket.on('message', (message) => {
       const msg = JSON.parse(message);
+      typingMessagesReceived.push(msg);
+
       if (msg.event === config.events.TYPING) {
         console.log('[TYPING] Received typing indicator');
       }
+
+      // Close after receiving messages
+      if (typingMessagesReceived.length >= 1 && !typingWsClosed) {
+        typingWsClosed = true;
+        console.log('[TYPING] Closing connection');
+        socket.close(1000, 'Typing test complete');
+      }
+    });
+
+    socket.on('close', () => {
+      console.log('[TYPING] Connection closed');
     });
   });
 
@@ -371,7 +404,7 @@ export default function(data) {
     '[TYPING] Connection - Status 101': (r) => r.status === 101,
   });
 
-  sleep(4);
+  sleep(2);
 
   // ========================================================================
   // PHASE 7: FILE DOWNLOAD
@@ -379,7 +412,7 @@ export default function(data) {
   console.log('\n--- PHASE 7: FILE DOWNLOAD ---');
 
   const downloadUrlRes = http.get(
-    `${baseUrl}${config.endpoints.downloadUrl(testState.uploadedFileId)}`,
+    `${baseUrl}${config.endpoints.frontDownloadUrl(testState.uploadedFileId)}`,
     { headers: createAuthHeaders(data.aliceToken) }
   );
 
@@ -399,7 +432,7 @@ export default function(data) {
 
   // Bob sends a message to the same room
   const bobMessageRes = http.post(
-    `${baseUrl}${config.endpoints.messages}`,
+    `${baseUrl}${config.endpoints.backMessages}`,
     JSON.stringify({
       roomId: testState.newRoomId,
       type: config.messageTypes.TEXT,
@@ -422,7 +455,7 @@ export default function(data) {
 
   // Alice gets messages (should see Bob's message)
   const aliceGetMessagesRes = http.get(
-    `${baseUrl}${config.endpoints.messages}/${testState.newRoomId}?page=0&size=10`,
+    `${baseUrl}${config.endpoints.frontMessages}/${testState.newRoomId}?page=0&size=10`,
     { headers: createAuthHeaders(data.aliceToken) }
   );
 
@@ -446,7 +479,7 @@ export default function(data) {
   // 9.1: Try to get non-existent room
   const fakeRoomId = generateUUID();
   const fakeRoomRes = http.get(
-    `${baseUrl}${config.endpoints.rooms}/${fakeRoomId}`,
+    `${baseUrl}${config.endpoints.frontRooms}/${fakeRoomId}`,
     { headers: createAuthHeaders(data.aliceToken) }
   );
 
@@ -460,7 +493,7 @@ export default function(data) {
 
   // 9.2: Try to send message to non-existent room
   const fakeMessageRes = http.post(
-    `${baseUrl}${config.endpoints.messages}`,
+    `${baseUrl}${config.endpoints.backMessages}`,
     JSON.stringify({
       roomId: fakeRoomId,
       type: config.messageTypes.TEXT,
@@ -480,7 +513,7 @@ export default function(data) {
   sleep(1);
 
   // 9.3: Unauthorized request (no token)
-  const noAuthRes = http.get(`${baseUrl}${config.endpoints.rooms}`);
+  const noAuthRes = http.get(`${baseUrl}${config.endpoints.frontRooms}`);
 
   check(noAuthRes, {
     '[ERR] No token - Status 401': (r) => r.status === 401,
@@ -512,7 +545,7 @@ export function teardown(data) {
   console.log('\nRun these SQL queries to verify data:');
 
   console.log('\n-- Verify room was created:');
-  console.log(`SELECT id, type, name, tenant_id FROM rooms WHERE id = '${testState.newRoomId}';`);
+  console.log(`SELECT id, type, name FROM rooms WHERE id = '${testState.newRoomId}';`);
 
   console.log('\n-- Verify room participants:');
   console.log(`SELECT room_id, user_id, role FROM room_participants WHERE room_id = '${testState.newRoomId}';`);

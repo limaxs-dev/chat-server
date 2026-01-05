@@ -28,24 +28,6 @@ public class JwtPrincipal {
         return UUID.fromString(userIdStr);
     }
 
-    public String getTenantId() {
-        if (securityIdentity == null || securityIdentity.getPrincipal() == null) {
-            throw new UnauthorizedException("No authentication provided");
-        }
-
-        // Try to get from JsonWebToken claims first
-        if (securityIdentity.getPrincipal() instanceof JsonWebToken) {
-            JsonWebToken jwt = (JsonWebToken) securityIdentity.getPrincipal();
-            return Optional.ofNullable(jwt.getClaim("tenantId"))
-                    .map(Object::toString)
-                    .orElse("");
-        }
-        // Fallback to security attributes
-        return Optional.ofNullable(securityIdentity.getAttributes().get("tenantId"))
-                .map(Object::toString)
-                .orElse("");
-    }
-
     public String getName() {
         if (securityIdentity == null || securityIdentity.getPrincipal() == null) {
             throw new UnauthorizedException("No authentication provided");

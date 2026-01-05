@@ -48,7 +48,7 @@ export default function(data) {
   console.log('\n=== Test 1: Get JWT Token ===');
 
   const tokenUrl = `${baseUrl}${config.endpoints.token}/${config.users.alice.id}`;
-  const tokenParams = `name=${config.users.alice.name}&tenant=${config.users.alice.tenant}`;
+  const tokenParams = `name=${config.users.alice.name}`;
   const tokenRes = http.get(`${tokenUrl}?${tokenParams}`);
 
   check(tokenRes, {
@@ -56,7 +56,6 @@ export default function(data) {
     'GET /api/dev/token/{userId} - Has token': (r) => JSON.parse(r.body).token !== undefined,
     'GET /api/dev/token/{userId} - Has userId': (r) => JSON.parse(r.body).userId === config.users.alice.id,
     'GET /api/dev/token/{userId} - Has name': (r) => JSON.parse(r.body).name === config.users.alice.name,
-    'GET /api/dev/token/{userId} - Has tenantId': (r) => JSON.parse(r.body).tenantId === config.users.alice.tenant,
   });
 
   const tokenData = JSON.parse(tokenRes.body);
@@ -70,16 +69,16 @@ export default function(data) {
   console.log('\n=== Test 2: List Rooms ===');
 
   const listRoomsRes = http.get(
-    `${baseUrl}${config.endpoints.rooms}?page=0&size=20`,
+    `${baseUrl}${config.endpoints.frontRooms}?page=0&size=20`,
     { headers: createAuthHeaders(aliceToken) }
   );
 
   check(listRoomsRes, {
-    'GET /api/rooms - Status 200': (r) => r.status === 200,
-    'GET /api/rooms - Returns array': (r) => Array.isArray(JSON.parse(r.body)),
-    'GET /api/rooms - Has at least 1 room': (r) => JSON.parse(r.body).length >= 1,
-    'GET /api/rooms - Room has id': (r) => JSON.parse(r.body)[0].id !== undefined,
-    'GET /api/rooms - Room has type': (r) => JSON.parse(r.body)[0].type !== undefined,
+    'GET /api/front/rooms - Status 200': (r) => r.status === 200,
+    'GET /api/front/rooms - Returns array': (r) => Array.isArray(JSON.parse(r.body)),
+    'GET /api/front/rooms - Has at least 1 room': (r) => JSON.parse(r.body).length >= 1,
+    'GET /api/front/rooms - Room has id': (r) => JSON.parse(r.body)[0].id !== undefined,
+    'GET /api/front/rooms - Room has type': (r) => JSON.parse(r.body)[0].type !== undefined,
   });
 
   const rooms = JSON.parse(listRoomsRes.body);
@@ -95,15 +94,15 @@ export default function(data) {
 
   const existingRoomId = config.rooms.engineering;
   const getRoomRes = http.get(
-    `${baseUrl}${config.endpoints.rooms}/${existingRoomId}`,
+    `${baseUrl}${config.endpoints.frontRooms}/${existingRoomId}`,
     { headers: createAuthHeaders(aliceToken) }
   );
 
   check(getRoomRes, {
-    'GET /api/rooms/{id} - Status 200': (r) => r.status === 200,
-    'GET /api/rooms/{id} - Has id': (r) => JSON.parse(r.body).id === existingRoomId,
-    'GET /api/rooms/{id} - Has type': (r) => JSON.parse(r.body).type === 'GROUP',
-    'GET /api/rooms/{id} - Has name': (r) => JSON.parse(r.body).name === 'Engineering Team',
+    'GET /api/front/rooms/{id} - Status 200': (r) => r.status === 200,
+    'GET /api/front/rooms/{id} - Has id': (r) => JSON.parse(r.body).id === existingRoomId,
+    'GET /api/front/rooms/{id} - Has type': (r) => JSON.parse(r.body).type === 'GROUP',
+    'GET /api/front/rooms/{id} - Has name': (r) => JSON.parse(r.body).name === 'Engineering Team',
   });
 
   const roomData = JSON.parse(getRoomRes.body);
@@ -126,16 +125,16 @@ export default function(data) {
   });
 
   const createRoomRes = http.post(
-    `${baseUrl}${config.endpoints.rooms}`,
+    `${baseUrl}${config.endpoints.backRooms}`,
     createRoomPayload,
     { headers: createAuthHeaders(aliceToken) }
   );
 
   check(createRoomRes, {
-    'POST /api/rooms - Status 201': (r) => r.status === 201,
-    'POST /api/rooms - Has id': (r) => JSON.parse(r.body).id !== undefined,
-    'POST /api/rooms - Type is GROUP': (r) => JSON.parse(r.body).type === 'GROUP',
-    'POST /api/rooms - Has name': (r) => JSON.parse(r.body).name !== undefined,
+    'POST /api/back/rooms - Status 201': (r) => r.status === 201,
+    'POST /api/back/rooms - Has id': (r) => JSON.parse(r.body).id !== undefined,
+    'POST /api/back/rooms - Type is GROUP': (r) => JSON.parse(r.body).type === 'GROUP',
+    'POST /api/back/rooms - Has name': (r) => JSON.parse(r.body).name !== undefined,
   });
 
   const createdRoom = JSON.parse(createRoomRes.body);
@@ -158,14 +157,14 @@ export default function(data) {
   });
 
   const createDirectRoomRes = http.post(
-    `${baseUrl}${config.endpoints.rooms}`,
+    `${baseUrl}${config.endpoints.backRooms}`,
     createDirectRoomPayload,
     { headers: createAuthHeaders(aliceToken) }
   );
 
   check(createDirectRoomRes, {
-    'POST /api/rooms (DIRECT) - Status 201': (r) => r.status === 201,
-    'POST /api/rooms (DIRECT) - Type is DIRECT': (r) => JSON.parse(r.body).type === 'DIRECT',
+    'POST /api/back/rooms (DIRECT) - Status 201': (r) => r.status === 201,
+    'POST /api/back/rooms (DIRECT) - Type is DIRECT': (r) => JSON.parse(r.body).type === 'DIRECT',
   });
 
   console.log('Created direct room:', JSON.stringify(JSON.parse(createDirectRoomRes.body), null, 2));
@@ -178,18 +177,18 @@ export default function(data) {
   console.log('\n=== Test 6: Get Messages ===');
 
   const getMessagesRes = http.get(
-    `${baseUrl}${config.endpoints.messages}/${config.rooms.engineering}?page=0&size=50`,
+    `${baseUrl}${config.endpoints.frontMessages}/${config.rooms.engineering}?page=0&size=50`,
     { headers: createAuthHeaders(aliceToken) }
   );
 
   check(getMessagesRes, {
-    'GET /api/messages/{roomId} - Status 200': (r) => r.status === 200,
-    'GET /api/messages/{roomId} - Returns array': (r) => Array.isArray(JSON.parse(r.body)),
-    'GET /api/messages/{roomId} - Message has id': (r) => {
+    'GET /api/front/messages/{roomId} - Status 200': (r) => r.status === 200,
+    'GET /api/front/messages/{roomId} - Returns array': (r) => Array.isArray(JSON.parse(r.body)),
+    'GET /api/front/messages/{roomId} - Message has id': (r) => {
       const messages = JSON.parse(r.body);
       return messages.length > 0 && messages[0].id !== undefined;
     },
-    'GET /api/messages/{roomId} - Message has senderId': (r) => {
+    'GET /api/front/messages/{roomId} - Message has senderId': (r) => {
       const messages = JSON.parse(r.body);
       return messages.length > 0 && messages[0].senderId !== undefined;
     },
@@ -218,17 +217,17 @@ export default function(data) {
   });
 
   const sendMessageRes = http.post(
-    `${baseUrl}${config.endpoints.messages}`,
+    `${baseUrl}${config.endpoints.backMessages}`,
     sendMessagePayload,
     { headers: createAuthHeaders(aliceToken) }
   );
 
   check(sendMessageRes, {
-    'POST /api/messages - Status 201': (r) => r.status === 201,
-    'POST /api/messages - Has id': (r) => JSON.parse(r.body).id !== undefined,
-    'POST /api/messages - Type is TEXT': (r) => JSON.parse(r.body).type === 'TEXT',
-    'POST /api/messages - Has contentText': (r) => JSON.parse(r.body).contentText !== undefined,
-    'POST /api/messages - Has createdAt': (r) => JSON.parse(r.body).createdAt !== undefined,
+    'POST /api/back/messages - Status 201': (r) => r.status === 201,
+    'POST /api/back/messages - Has id': (r) => JSON.parse(r.body).id !== undefined,
+    'POST /api/back/messages - Type is TEXT': (r) => JSON.parse(r.body).type === 'TEXT',
+    'POST /api/back/messages - Has contentText': (r) => JSON.parse(r.body).contentText !== undefined,
+    'POST /api/back/messages - Has createdAt': (r) => JSON.parse(r.body).createdAt !== undefined,
   });
 
   const sentMessage = JSON.parse(sendMessageRes.body);
@@ -251,14 +250,14 @@ export default function(data) {
   });
 
   const sendMessageToNewRoomRes = http.post(
-    `${baseUrl}${config.endpoints.messages}`,
+    `${baseUrl}${config.endpoints.backMessages}`,
     sendMessageToNewRoomPayload,
     { headers: createAuthHeaders(aliceToken) }
   );
 
   check(sendMessageToNewRoomRes, {
-    'POST /api/messages (new room) - Status 201': (r) => r.status === 201,
-    'POST /api/messages (new room) - Correct roomId': (r) => JSON.parse(r.body).roomId === newRoomId,
+    'POST /api/back/messages (new room) - Status 201': (r) => r.status === 201,
+    'POST /api/back/messages (new room) - Correct roomId': (r) => JSON.parse(r.body).roomId === newRoomId,
   });
 
   console.log('Sent message to new room:', JSON.stringify(JSON.parse(sendMessageToNewRoomRes.body), null, 2));
@@ -279,14 +278,14 @@ export default function(data) {
   });
 
   const sameClientRefRes = http.post(
-    `${baseUrl}${config.endpoints.messages}`,
+    `${baseUrl}${config.endpoints.backMessages}`,
     sameClientRefPayload,
     { headers: createAuthHeaders(aliceToken) }
   );
 
   check(sameClientRefRes, {
-    'POST /api/messages (idempotent) - Status 409 or 200': (r) => r.status === 409 || r.status === 200,
-    'POST /api/messages (idempotent) - Returns same message': (r) => {
+    'POST /api/back/messages (idempotent) - Status 409 or 200': (r) => r.status === 409 || r.status === 200,
+    'POST /api/back/messages (idempotent) - Returns same message': (r) => {
       const body = JSON.parse(r.body);
       return body.id === newMessageId;
     },
@@ -302,22 +301,22 @@ export default function(data) {
   console.log('\n=== Test 10: Pagination Test ===');
 
   const page1Res = http.get(
-    `${baseUrl}${config.endpoints.messages}/${config.rooms.engineering}?page=0&size=2`,
+    `${baseUrl}${config.endpoints.frontMessages}/${config.rooms.engineering}?page=0&size=2`,
     { headers: createAuthHeaders(aliceToken) }
   );
 
   const page2Res = http.get(
-    `${baseUrl}${config.endpoints.messages}/${config.rooms.engineering}?page=1&size=2`,
+    `${baseUrl}${config.endpoints.frontMessages}/${config.rooms.engineering}?page=1&size=2`,
     { headers: createAuthHeaders(aliceToken) }
   );
 
   check(page1Res, {
-    'GET /api/messages (page 1) - Status 200': (r) => r.status === 200,
-    'GET /api/messages (page 1) - Has 2 messages': (r) => JSON.parse(r.body).length <= 2,
+    'GET /api/front/messages (page 1) - Status 200': (r) => r.status === 200,
+    'GET /api/front/messages (page 1) - Has 2 messages': (r) => JSON.parse(r.body).length <= 2,
   });
 
   check(page2Res, {
-    'GET /api/messages (page 2) - Status 200': (r) => r.status === 200,
+    'GET /api/front/messages (page 2) - Status 200': (r) => r.status === 200,
   });
 
   console.log('Page 1 messages:', JSON.parse(page1Res.body).length);
@@ -330,10 +329,10 @@ export default function(data) {
   // ========================================================================
   console.log('\n=== Test 11: Unauthorized Access (No Token) ===');
 
-  const noTokenRes = http.get(`${baseUrl}${config.endpoints.rooms}`);
+  const noTokenRes = http.get(`${baseUrl}${config.endpoints.frontRooms}`);
 
   check(noTokenRes, {
-    'GET /api/rooms (no token) - Status 401': (r) => r.status === 401,
+    'GET /api/front/rooms (no token) - Status 401': (r) => r.status === 401,
   });
 
   console.log('No token response:', noTokenRes.status);
@@ -347,12 +346,12 @@ export default function(data) {
 
   const invalidRoomId = generateUUID();
   const invalidRoomRes = http.get(
-    `${baseUrl}${config.endpoints.rooms}/${invalidRoomId}`,
+    `${baseUrl}${config.endpoints.frontRooms}/${invalidRoomId}`,
     { headers: createAuthHeaders(aliceToken) }
   );
 
   check(invalidRoomRes, {
-    'GET /api/rooms/{invalidId} - Status 404': (r) => r.status === 404,
+    'GET /api/front/rooms/{invalidId} - Status 404': (r) => r.status === 404,
   });
 
   console.log('Invalid room response:', invalidRoomRes.status);

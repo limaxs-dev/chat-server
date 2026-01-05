@@ -19,9 +19,6 @@ public class ChatUser {
     @Column(nullable = false)
     private String name;
 
-    @Column(name = "tenant_id", nullable = false)
-    private String tenantId;
-
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -46,14 +43,6 @@ public class ChatUser {
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public String getTenantId() {
-        return tenantId;
-    }
-
-    public void setTenantId(String tenantId) {
-        this.tenantId = tenantId;
     }
 
     public LocalDateTime getCreatedAt() {

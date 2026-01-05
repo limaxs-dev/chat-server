@@ -58,7 +58,7 @@ export default function(data) {
   console.log('\n[00s] Creating group room...');
 
   const createRoomRes = http.post(
-    `${baseUrl}${config.endpoints.rooms}`,
+    `${baseUrl}${config.endpoints.backRooms}`,
     JSON.stringify({
       type: config.roomTypes.GROUP,
       name: 'Project Discussion ' + Date.now(),
@@ -86,7 +86,7 @@ export default function(data) {
   console.log('\n[05s] Alice sends opening message...');
 
   const msg1Res = http.post(
-    `${baseUrl}${config.endpoints.messages}`,
+    `${baseUrl}${config.endpoints.backMessages}`,
     JSON.stringify({
       roomId: testState.roomId,
       type: config.messageTypes.TEXT,
@@ -108,7 +108,7 @@ export default function(data) {
   console.log('\n[07s] Bob starts typing...');
 
   const bobTypingOnRes = http.post(
-    `${baseUrl}${config.endpoints.messages}`,
+    `${baseUrl}${config.endpoints.backMessages}`,
     JSON.stringify({
       roomId: testState.roomId,
       type: config.messageTypes.TEXT,
@@ -128,7 +128,7 @@ export default function(data) {
   console.log('[09s] Bob sends message...');
 
   const msg2Res = http.post(
-    `${baseUrl}${config.endpoints.messages}`,
+    `${baseUrl}${config.endpoints.backMessages}`,
     JSON.stringify({
       roomId: testState.roomId,
       type: config.messageTypes.TEXT,
@@ -150,7 +150,7 @@ export default function(data) {
 
   const pdfFileName = 'requirements-' + Date.now() + '.pdf';
   const pdfUploadUrlRes = http.post(
-    `${baseUrl}${config.endpoints.uploadUrl}?fileName=${encodeURIComponent(pdfFileName)}&fileSize=102400&contentType=application/pdf`,
+    `${baseUrl}${config.endpoints.backUploadUrl}?fileName=${encodeURIComponent(pdfFileName)}&fileSize=102400&contentType=application/pdf`,
     null,
     { headers: createAuthHeaders(data.bobToken) }
   );
@@ -167,7 +167,7 @@ export default function(data) {
   console.log('[12s] PDF upload URL obtained');
 
   const pdfConfirmRes = http.post(
-    `${baseUrl}${config.endpoints.confirmUpload(pdfUploadData.fileId)}`,
+    `${baseUrl}${config.endpoints.backConfirmUpload(pdfUploadData.fileId)}`,
     '',
     { headers: createAuthHeaders(data.bobToken) }
   );
@@ -190,7 +190,7 @@ export default function(data) {
   console.log('[17s] Charlie sends message...');
 
   const msg3Res = http.post(
-    `${baseUrl}${config.endpoints.messages}`,
+    `${baseUrl}${config.endpoints.backMessages}`,
     JSON.stringify({
       roomId: testState.roomId,
       type: config.messageTypes.TEXT,
@@ -212,7 +212,7 @@ export default function(data) {
 
   const imageFileName = 'design-mockup-' + Date.now() + '.png';
   const imageUploadUrlRes = http.post(
-    `${baseUrl}${config.endpoints.uploadUrl}?fileName=${encodeURIComponent(imageFileName)}&fileSize=256000&contentType=image/png`,
+    `${baseUrl}${config.endpoints.backUploadUrl}?fileName=${encodeURIComponent(imageFileName)}&fileSize=256000&contentType=image/png`,
     null,
     { headers: createAuthHeaders(data.aliceToken) }
   );
@@ -225,7 +225,7 @@ export default function(data) {
   testState.filesUploaded.push(imageUploadData.fileId);
 
   const imageConfirmRes = http.post(
-    `${baseUrl}${config.endpoints.confirmUpload(imageUploadData.fileId)}`,
+    `${baseUrl}${config.endpoints.backConfirmUpload(imageUploadData.fileId)}`,
     '',
     { headers: createAuthHeaders(data.aliceToken) }
   );
@@ -234,7 +234,7 @@ export default function(data) {
 
   // Now send IMAGE message
   const msg4Res = http.post(
-    `${baseUrl}${config.endpoints.messages}`,
+    `${baseUrl}${config.endpoints.backMessages}`,
     JSON.stringify({
       roomId: testState.roomId,
       type: config.messageTypes.IMAGE,
@@ -256,7 +256,7 @@ export default function(data) {
   console.log('\n[25s] Charlie reacts...');
 
   const msg5Res = http.post(
-    `${baseUrl}${config.endpoints.messages}`,
+    `${baseUrl}${config.endpoints.backMessages}`,
     JSON.stringify({
       roomId: testState.roomId,
       type: config.messageTypes.TEXT,
@@ -282,7 +282,7 @@ export default function(data) {
   // 29s - Bob: "One question about the API..." (TEXT)
   // =========================================================================
   const msg6Res = http.post(
-    `${baseUrl}${config.endpoints.messages}`,
+    `${baseUrl}${config.endpoints.backMessages}`,
     JSON.stringify({
       roomId: testState.roomId,
       type: config.messageTypes.TEXT,
@@ -303,7 +303,7 @@ export default function(data) {
   console.log('\n[32s] Alice responds...');
 
   const msg7Res = http.post(
-    `${baseUrl}${config.endpoints.messages}`,
+    `${baseUrl}${config.endpoints.backMessages}`,
     JSON.stringify({
       roomId: testState.roomId,
       type: config.messageTypes.TEXT,
@@ -325,7 +325,7 @@ export default function(data) {
 
   const audioFileName = 'voice-note-' + Date.now() + '.mp3';
   const audioUploadUrlRes = http.post(
-    `${baseUrl}${config.endpoints.uploadUrl}?fileName=${encodeURIComponent(audioFileName)}&fileSize=512000&contentType=audio/mpeg`,
+    `${baseUrl}${config.endpoints.backUploadUrl}?fileName=${encodeURIComponent(audioFileName)}&fileSize=512000&contentType=audio/mpeg`,
     null,
     { headers: createAuthHeaders(data.bobToken) }
   );
@@ -338,7 +338,7 @@ export default function(data) {
   testState.filesUploaded.push(audioUploadData.fileId);
 
   const audioConfirmRes = http.post(
-    `${baseUrl}${config.endpoints.confirmUpload(audioUploadData.fileId)}`,
+    `${baseUrl}${config.endpoints.backConfirmUpload(audioUploadData.fileId)}`,
     '',
     { headers: createAuthHeaders(data.bobToken) }
   );
@@ -346,7 +346,7 @@ export default function(data) {
   check(audioConfirmRes, { '[35s] Confirm audio upload - Status 204': (r) => r.status === 204 });
 
   const msg8Res = http.post(
-    `${baseUrl}${config.endpoints.messages}`,
+    `${baseUrl}${config.endpoints.backMessages}`,
     JSON.stringify({
       roomId: testState.roomId,
       type: config.messageTypes.AUDIO,
@@ -368,7 +368,7 @@ export default function(data) {
   console.log('\n[38s] Alice responds...');
 
   const msg9Res = http.post(
-    `${baseUrl}${config.endpoints.messages}`,
+    `${baseUrl}${config.endpoints.backMessages}`,
     JSON.stringify({
       roomId: testState.roomId,
       type: config.messageTypes.TEXT,
@@ -389,7 +389,7 @@ export default function(data) {
   console.log('\n[40s] Charlie sends system message...');
 
   const msg10Res = http.post(
-    `${baseUrl}${config.endpoints.messages}`,
+    `${baseUrl}${config.endpoints.backMessages}`,
     JSON.stringify({
       roomId: testState.roomId,
       type: config.messageTypes.SYSTEM,
@@ -409,18 +409,44 @@ export default function(data) {
   sleep(2);
   console.log('\n[42s] Verifying presence...');
 
+  let aliceWsClosed = false;
+  let aliceWsMessages = [];
+
   const aliceWsUrl = `${config.wsUrl}?token=${data.aliceToken}`;
   const aliceWsRes = ws.connect(aliceWsUrl, {}, function (socket) {
     socket.on('open', () => {
       console.log('[42s] Alice WebSocket connected');
+
+      // Send a message to trigger a NEW_MESSAGE event response
+      const testMessage = {
+        event: config.events.SEND_MSG,
+        traceId: generateUUID(),
+        data: {
+          roomId: testState.roomId,
+          type: config.messageTypes.TEXT,
+          contentText: 'Presence test message ' + Date.now(),
+          contentMeta: null,
+          clientRef: generateUUID()
+        }
+      };
+      socket.send(JSON.stringify(testMessage));
+      console.log('[42s] Sent test message');
     });
     socket.on('message', (message) => {
       const msg = JSON.parse(message);
-      if (msg.event === 'PRESENCE') {
-        console.log('[42s] Received presence event');
+      aliceWsMessages.push(msg);
+      console.log('[42s] Received event:', msg.event);
+
+      // Close after receiving at least 1 message
+      if (aliceWsMessages.length >= 1 && !aliceWsClosed) {
+        aliceWsClosed = true;
+        console.log('[42s] Closing WebSocket connection');
+        socket.close(1000, 'Presence test complete');
       }
     });
-    setTimeout(() => socket.close(), 3000);
+    socket.on('close', () => {
+      console.log('[42s] WebSocket connection closed');
+    });
   });
 
   check(aliceWsRes, { '[42s] Alice WebSocket - Status 101': (r) => r.status === 101 });
@@ -433,7 +459,7 @@ export default function(data) {
 
   for (let i = 0; i < 5; i++) {
     const msgRes = http.post(
-      `${baseUrl}${config.endpoints.messages}`,
+      `${baseUrl}${config.endpoints.backMessages}`,
       JSON.stringify({
         roomId: testState.roomId,
         type: config.messageTypes.TEXT,
@@ -456,7 +482,7 @@ export default function(data) {
   console.log('\n[50s] Verifying all messages in database...');
 
   const getMessagesRes = http.get(
-    `${baseUrl}${config.endpoints.messages}/${testState.roomId}?page=0&size=100`,
+    `${baseUrl}${config.endpoints.frontMessages}/${testState.roomId}?page=0&size=100`,
     { headers: createAuthHeaders(data.aliceToken) }
   );
 
@@ -487,7 +513,7 @@ export default function(data) {
   console.log('\n[58s] Final database verification...');
 
   const roomRes = http.get(
-    `${baseUrl}${config.endpoints.rooms}/${testState.roomId}`,
+    `${baseUrl}${config.endpoints.frontRooms}/${testState.roomId}`,
     { headers: createAuthHeaders(data.aliceToken) }
   );
 
@@ -527,7 +553,7 @@ export function teardown(data) {
   console.log('\nRun these SQL queries to verify data:');
 
   console.log('\n-- Verify room was created:');
-  console.log(`SELECT id, type, name, tenant_id FROM rooms WHERE id = '${testState.roomId}';`);
+  console.log(`SELECT id, type, name FROM rooms WHERE id = '${testState.roomId}';`);
 
   console.log('\n-- Verify room participants:');
   console.log(`SELECT room_id, user_id, role FROM room_participants WHERE room_id = '${testState.roomId}';`);

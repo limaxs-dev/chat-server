@@ -83,6 +83,13 @@ public class RedisService {
         return getPubSubCommands().publish(channel, message).replaceWithVoid();
     }
 
+    // Pub/Sub: presence:room:{room_id} - user online/offline events for room members
+    public Uni<Void> publishPresence(UUID roomId, String message) {
+        String channel = "presence:room:" + roomId.toString();
+        LOG.info("Publishing to presence channel: " + channel);
+        return getPubSubCommands().publish(channel, message).replaceWithVoid();
+    }
+
     // Call State: user:call:{user_id} -> "busy", TTL 300s (5 minutes)
     public Uni<Void> setCallBusy(UUID userId) {
         return getValueCommands().setex("user:call:" + userId, 300, "busy").replaceWithVoid();

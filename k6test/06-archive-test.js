@@ -46,7 +46,7 @@ export default function(data) {
   console.log('\n--- STEP 1: Create test room ---');
 
   const createRoomRes = http.post(
-    `${baseUrl}${config.endpoints.rooms}`,
+    `${baseUrl}${config.endpoints.backRooms}`,
     JSON.stringify({
       type: config.roomTypes.GROUP,
       name: 'Archive Test Room ' + Date.now(),
@@ -72,7 +72,7 @@ export default function(data) {
   const messageCount = 5;
   for (let i = 0; i < messageCount; i++) {
     const msgRes = http.post(
-      `${baseUrl}${config.endpoints.messages}`,
+      `${baseUrl}${config.endpoints.backMessages}`,
       JSON.stringify({
         roomId: testState.testRoomId,
         type: config.messageTypes.TEXT,
@@ -97,7 +97,7 @@ export default function(data) {
   console.log('\n--- STEP 3: Verify room in main table ---');
 
   const getRoomRes = http.get(
-    `${baseUrl}${config.endpoints.rooms}/${testState.testRoomId}`,
+    `${baseUrl}${config.endpoints.frontRooms}/${testState.testRoomId}`,
     { headers: createAuthHeaders(data.aliceToken) }
   );
 
@@ -115,7 +115,7 @@ export default function(data) {
   console.log('\n--- STEP 4: Get messages from main table ---');
 
   const getMessagesRes = http.get(
-    `${baseUrl}${config.endpoints.messages}/${testState.testRoomId}?page=0&size=50`,
+    `${baseUrl}${config.endpoints.frontMessages}/${testState.testRoomId}?page=0&size=50`,
     { headers: createAuthHeaders(data.aliceToken) }
   );
 
@@ -134,7 +134,7 @@ export default function(data) {
   console.log('\n--- STEP 5: Archive room via admin API ---');
 
   const archiveRes = http.post(
-    `${baseUrl}/api/admin/archive/${testState.testRoomId}`,
+    `${baseUrl}${config.endpoints.backAdminArchive(testState.testRoomId)}`,
     '',
     { headers: createAuthHeaders(data.aliceToken) }
   );
@@ -167,7 +167,7 @@ export default function(data) {
   console.log('\n--- STEP 6: Verify room removed from main table ---');
 
   const getRoomAfterRes = http.get(
-    `${baseUrl}${config.endpoints.rooms}/${testState.testRoomId}`,
+    `${baseUrl}${config.endpoints.frontRooms}/${testState.testRoomId}`,
     { headers: createAuthHeaders(data.aliceToken) }
   );
 
@@ -184,7 +184,7 @@ export default function(data) {
   console.log('\n--- STEP 7: Verify messages removed from main table ---');
 
   const getMessagesAfterRes = http.get(
-    `${baseUrl}${config.endpoints.messages}/${testState.testRoomId}?page=0&size=50`,
+    `${baseUrl}${config.endpoints.frontMessages}/${testState.testRoomId}?page=0&size=50`,
     { headers: createAuthHeaders(data.aliceToken) }
   );
 
@@ -201,7 +201,7 @@ export default function(data) {
   console.log('\n--- STEP 8: List archived rooms ---');
 
   const listArchivedRes = http.get(
-    `${baseUrl}/api/archive/rooms?page=0&size=20`,
+    `${baseUrl}${config.endpoints.backArchive}/rooms?page=0&size=20`,
     { headers: createAuthHeaders(data.aliceToken) }
   );
 
@@ -224,7 +224,7 @@ export default function(data) {
 
   if (testState.archivedRoomId) {
     const getArchivedMessagesRes = http.get(
-      `${baseUrl}/api/archive/rooms/${testState.archivedRoomId}/messages?page=0&size=50`,
+      `${baseUrl}${config.endpoints.backArchive}/rooms/${testState.archivedRoomId}/messages?page=0&size=50`,
       { headers: createAuthHeaders(data.aliceToken) }
     );
 
@@ -249,7 +249,7 @@ export default function(data) {
 
   if (testState.archivedRoomId) {
     const getArchivedParticipantsRes = http.get(
-      `${baseUrl}/api/archive/rooms/${testState.archivedRoomId}/participants`,
+      `${baseUrl}${config.endpoints.backArchive}/rooms/${testState.archivedRoomId}/participants`,
       { headers: createAuthHeaders(data.aliceToken) }
     );
 
@@ -268,24 +268,24 @@ export default function(data) {
   sleep(1);
 
   // =========================================================================
-  // STEP 11: Verify tenant isolation (Bob's archived rooms)
+  // STEP 11: Verify data isolation (Bob's archived rooms)
   // =========================================================================
-  console.log('\n--- STEP 11: Verify tenant isolation ---');
+  console.log('\n--- STEP 11: Verify data isolation ---');
 
   const bobArchivedRes = http.get(
-    `${baseUrl}/api/archive/rooms?page=0&size=20`,
+    `${baseUrl}${config.endpoints.backArchive}/rooms?page=0&size=20`,
     { headers: createAuthHeaders(data.bobToken) }
   );
 
   check(bobArchivedRes, {
     '[STEP 11] Bob archived rooms - Status 200': (r) => r.status === 200,
-    '[STEP 11] Bob archived rooms - Same as Alice (same tenant)': (r) => {
+    '[STEP 11] Bob archived rooms - Same as Alice': (r) => {
       const bobRooms = JSON.parse(r.body);
       return bobRooms.some(r => r.originalRoomId === testState.testRoomId);
     },
   });
 
-  console.log('[STEP 11] Tenant isolation verified');
+  console.log('[STEP 11] Data isolation verified');
 
   // =========================================================================
   // TEST SUMMARY

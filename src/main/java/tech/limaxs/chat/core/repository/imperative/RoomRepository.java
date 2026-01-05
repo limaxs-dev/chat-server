@@ -11,25 +11,42 @@ import java.util.UUID;
 @ApplicationScoped
 public class RoomRepository implements PanacheRepositoryBase<Room, UUID> {
 
-    public List<Room> findByTenantId(String tenantId, int page, int size) {
-        return find("tenantId = ?1 order by updatedAt desc", tenantId)
-                .page(page, size)
-                .list();
+    public List<Room> findByParticipantUserId(UUID userId, int page, int size) {
+        return find("""
+            SELECT DISTINCT r FROM Room r
+            JOIN r.participants p
+            WHERE p.id.userId = ?1
+            ORDER BY r.updatedAt DESC
+            """, userId).page(page, size).list();
     }
 
-    public Optional<Room> findByIdAndTenantId(UUID id, String tenantId) {
-        return find("id = ?1 and tenantId = ?2", id, tenantId).firstResultOptional();
+    public Optional<Room> findByIdAndParticipantUserId(UUID roomId, UUID userId) {
+        return list("""
+            SELECT DISTINCT r FROM Room r
+            JOIN r.participants p
+            WHERE r.id = ?1
+            AND p.id.userId = ?2
+            """, roomId, userId).stream().findFirst();
     }
 
-    public List<Room> findDirectRoomBetweenUsers(UUID user1Id, UUID user2Id, String tenantId) {
+    public boolean existsByIdAndParticipantUserId(UUID roomId, UUID userId) {
+        long count = count("""
+            SELECT COUNT(r) FROM Room r
+            JOIN r.participants p
+            WHERE r.id = ?1
+            AND p.id.userId = ?2
+            """, roomId, userId);
+        return count > 0;
+    }
+
+    public List<Room> findDirectRoomBetweenUsers(UUID user1Id, UUID user2Id) {
         return list("""
             SELECT DISTINCT r FROM Room r
             JOIN r.participants p1
             JOIN r.participants p2
             WHERE r.type = 'DIRECT'
-            AND r.tenantId = ?3
-            AND p1.user.id = ?1
-            AND p2.user.id = ?2
-            """, user1Id, user2Id, tenantId);
+            AND p1.id.userId = ?1
+            AND p2.id.userId = ?2
+            """, user1Id, user2Id);
     }
 }

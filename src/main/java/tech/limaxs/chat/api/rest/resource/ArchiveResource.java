@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-@Path("/api/archive")
+@Path("/api/back/archive")
 @RunOnVirtualThread
 @ApplicationScoped
 public class ArchiveResource {
@@ -39,15 +39,14 @@ public class ArchiveResource {
         this.jwtPrincipal = jwtPrincipal;
     }
 
-    // GET /api/archive/rooms - List archived rooms
+    // GET /api/back/archive/rooms - List archived rooms
     @GET
     @Path("/rooms")
     public Response listArchivedRooms(
             @QueryParam("page") @DefaultValue("0") int page,
             @QueryParam("size") @DefaultValue("20") int size) {
-        String tenantId = jwtPrincipal.getTenantId();
         List<ArchivedRoom> archivedRooms = archivedRoomRepository
-                .findByTenantIdOrderByArchivedAtDesc(tenantId, page, size);
+                .findAllOrderByArchivedAtDesc(page, size);
 
         List<ArchivedRoomResponse> responses = archivedRooms.stream()
                 .map(ArchivedRoomResponse::from)
@@ -56,7 +55,7 @@ public class ArchiveResource {
         return Response.ok(responses).build();
     }
 
-    // GET /api/archive/rooms/{archivedRoomId} - Get archived room details
+    // GET /api/back/archive/rooms/{archivedRoomId} - Get archived room details
     @GET
     @Path("/rooms/{archivedRoomId}")
     public Response getArchivedRoom(@PathParam("archivedRoomId") UUID archivedRoomId) {
@@ -65,16 +64,10 @@ public class ArchiveResource {
             return Response.status(Response.Status.NOT_FOUND).entity("Archived room not found").build();
         }
 
-        // Verify tenant access
-        String tenantId = jwtPrincipal.getTenantId();
-        if (!archivedRoom.getTenantId().equals(tenantId)) {
-            return Response.status(Response.Status.FORBIDDEN).entity("Access denied").build();
-        }
-
         return Response.ok(ArchivedRoomResponse.from(archivedRoom)).build();
     }
 
-    // GET /api/archive/rooms/{archivedRoomId}/messages - Get archived messages
+    // GET /api/back/archive/rooms/{archivedRoomId}/messages - Get archived messages
     @GET
     @Path("/rooms/{archivedRoomId}/messages")
     public Response getArchivedMessages(
@@ -82,15 +75,10 @@ public class ArchiveResource {
             @QueryParam("page") @DefaultValue("0") int page,
             @QueryParam("size") @DefaultValue("50") int size) {
 
-        // Verify archived room exists and tenant has access
+        // Verify archived room exists
         ArchivedRoom archivedRoom = archivedRoomRepository.findById(archivedRoomId);
         if (archivedRoom == null) {
             return Response.status(Response.Status.NOT_FOUND).entity("Archived room not found").build();
-        }
-
-        String tenantId = jwtPrincipal.getTenantId();
-        if (!archivedRoom.getTenantId().equals(tenantId)) {
-            return Response.status(Response.Status.FORBIDDEN).entity("Access denied").build();
         }
 
         List<ArchivedMessage> messages = archivedMessageRepository
@@ -103,19 +91,14 @@ public class ArchiveResource {
         return Response.ok(responses).build();
     }
 
-    // GET /api/archive/rooms/{archivedRoomId}/participants - Get archived participants
+    // GET /api/back/archive/rooms/{archivedRoomId}/participants - Get archived participants
     @GET
     @Path("/rooms/{archivedRoomId}/participants")
     public Response getArchivedParticipants(@PathParam("archivedRoomId") UUID archivedRoomId) {
-        // Verify archived room exists and tenant has access
+        // Verify archived room exists
         ArchivedRoom archivedRoom = archivedRoomRepository.findById(archivedRoomId);
         if (archivedRoom == null) {
             return Response.status(Response.Status.NOT_FOUND).entity("Archived room not found").build();
-        }
-
-        String tenantId = jwtPrincipal.getTenantId();
-        if (!archivedRoom.getTenantId().equals(tenantId)) {
-            return Response.status(Response.Status.FORBIDDEN).entity("Access denied").build();
         }
 
         List<ArchivedParticipant> participants = archivedParticipantRepository
@@ -124,21 +107,14 @@ public class ArchiveResource {
         return Response.ok(participants).build();
     }
 
-    // GET /api/archive/search/by-original-room/{originalRoomId} - Find archived room by original ID
+    // GET /api/back/archive/search/by-original-room/{originalRoomId} - Find archived room by original ID
     @GET
     @Path("/search/by-original-room/{originalRoomId}")
     public Response findByOriginalRoomId(@PathParam("originalRoomId") UUID originalRoomId) {
-        String tenantId = jwtPrincipal.getTenantId();
-
         ArchivedRoom archivedRoom = archivedRoomRepository.findByOriginalRoomId(originalRoomId);
         if (archivedRoom == null) {
             return Response.status(Response.Status.NOT_FOUND)
                     .entity("Room not found in archive (may not be archived yet)").build();
-        }
-
-        // Verify tenant access
-        if (!archivedRoom.getTenantId().equals(tenantId)) {
-            return Response.status(Response.Status.FORBIDDEN).entity("Access denied").build();
         }
 
         return Response.ok(ArchivedRoomResponse.from(archivedRoom)).build();

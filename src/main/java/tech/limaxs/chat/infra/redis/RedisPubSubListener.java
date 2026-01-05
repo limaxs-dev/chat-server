@@ -19,6 +19,7 @@ import java.util.logging.Logger;
  * - chat:room:{room_id} - Messages, edits, deletes for room members
  * - signal:user:{user_id} - WebRTC signaling (SDP/ICE) for P2P calls
  * - typing:room:{room_id} - Typing indicators for room members
+ * - presence:room:{room_id} - User online/offline events for room members
  */
 @ApplicationScoped
 public class RedisPubSubListener {
@@ -88,6 +89,22 @@ public class RedisPubSubListener {
                         () -> LOG.info("Successfully subscribed to typing channels")
                 );
 
+        // Subscribe to all presence channels
+        redisDataSource.pubsub(String.class)
+                .subscribe("presence:room:*")
+                .subscribe()
+                .with(
+                        message -> {
+                            LOG.fine("Received presence message on channel: " + message);
+                            handlePresenceMessage(message);
+                        },
+                        failure -> {
+                            LOG.severe("Failed to subscribe to presence channels: " + failure.getMessage());
+                            failure.printStackTrace();
+                        },
+                        () -> LOG.info("Successfully subscribed to presence channels")
+                );
+
         LOG.info("Redis Pub/Sub listener started");
     }
 
@@ -149,6 +166,25 @@ public class RedisPubSubListener {
             }
         } catch (Exception e) {
             LOG.severe("Error handling typing message: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Handle presence messages (presence:room:{room_id}).
+     * Forward PRESENCE events to all WebSocket connections in the room.
+     */
+    private void handlePresenceMessage(String message) {
+        try {
+            // Parse the message to extract room ID
+            JsonNode json = objectMapper.readTree(message);
+            if (json.has("data") && json.get("data").has("roomId")) {
+                String roomId = json.get("data").get("roomId").asText();
+                LOG.info("Forwarding PRESENCE event to room: " + roomId);
+                ChatWebSocketHandler.broadcastToRoom(UUID.fromString(roomId), message);
+            }
+        } catch (Exception e) {
+            LOG.severe("Error handling presence message: " + e.getMessage());
             e.printStackTrace();
         }
     }

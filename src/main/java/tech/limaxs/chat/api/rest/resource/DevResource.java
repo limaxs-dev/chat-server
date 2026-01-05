@@ -22,16 +22,14 @@ public class DevResource {
     @Produces("application/json")
     public Response generateToken(
             @PathParam("userId") String userId,
-            @QueryParam("name") @DefaultValue("Test User") String name,
-            @QueryParam("tenant") @DefaultValue("test-tenant") String tenantId) {
+            @QueryParam("name") @DefaultValue("Test User") String name) {
         try {
-            String token = JWTGenerator.generateToken(userId, name, tenantId);
+            String token = JWTGenerator.generateToken(userId, name);
 
             return Response.ok(new TokenResponse(
                     token,
                     userId,
                     name,
-                    tenantId,
                     new Date(System.currentTimeMillis() + 7 * 24 * 60 * 60 * 1000)
             )).build();
         } catch (Exception e) {

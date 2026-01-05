@@ -72,7 +72,7 @@ export default function(data) {
   const fileName = 'test-upload-' + Date.now() + '.png';
   const uploadUrlParams = `fileName=${encodeURIComponent(fileName)}&fileSize=${fileSize}&contentType=image/png`;
   const uploadUrlRes = http.post(
-    `${baseUrl}${config.endpoints.uploadUrl}?${uploadUrlParams}`,
+    `${baseUrl}${config.endpoints.backUploadUrl}?${uploadUrlParams}`,
     null,
     { headers: createAuthHeaders(aliceToken) }
   );
@@ -120,7 +120,7 @@ export default function(data) {
   console.log('\n=== Test 2: Confirm the upload ===');
 
   const confirmUploadRes = http.post(
-    `${baseUrl}${config.endpoints.confirmUpload(uploadedFileId)}`,
+    `${baseUrl}${config.endpoints.backConfirmUpload(uploadedFileId)}`,
     '',
     { headers: createAuthHeaders(aliceToken) }
   );
@@ -139,7 +139,7 @@ export default function(data) {
   console.log('\n=== Test 3: Get download URL ===');
 
   const downloadUrlRes = http.get(
-    `${baseUrl}${config.endpoints.downloadUrl(uploadedFileId)}`,
+    `${baseUrl}${config.endpoints.frontDownloadUrl(uploadedFileId)}`,
     { headers: createAuthHeaders(aliceToken) }
   );
 
@@ -192,7 +192,7 @@ export default function(data) {
   const fileName2 = 'test-upload-2-' + Date.now() + '.png';
   const uploadUrlParams2 = `fileName=${encodeURIComponent(fileName2)}&fileSize=${fileSize}&contentType=image/png`;
   const uploadUrlRes2 = http.post(
-    `${baseUrl}${config.endpoints.uploadUrl}?${uploadUrlParams2}`,
+    `${baseUrl}${config.endpoints.backUploadUrl}?${uploadUrlParams2}`,
     null,
     { headers: createAuthHeaders(aliceToken) }
   );
@@ -218,7 +218,7 @@ export default function(data) {
 
   // Confirm
   const confirmUploadRes2 = http.post(
-    `${baseUrl}${config.endpoints.confirmUpload(fileId2)}`,
+    `${baseUrl}${config.endpoints.backConfirmUpload(fileId2)}`,
     '',
     { headers: createAuthHeaders(aliceToken) }
   );
@@ -237,7 +237,7 @@ export default function(data) {
   console.log('\n=== Test 6: Get download URL for second file ===');
 
   const downloadUrlRes2 = http.get(
-    `${baseUrl}${config.endpoints.downloadUrl(fileId2)}`,
+    `${baseUrl}${config.endpoints.frontDownloadUrl(fileId2)}`,
     { headers: createAuthHeaders(aliceToken) }
   );
 
@@ -257,7 +257,7 @@ export default function(data) {
   const jpegFileName = 'test-' + Date.now() + '.jpg';
   const jpegSize = 204800; // 200 KB
   const jpegUploadUrlRes = http.post(
-    `${baseUrl}${config.endpoints.uploadUrl}?fileName=${encodeURIComponent(jpegFileName)}&fileSize=${jpegSize}&contentType=image/jpeg`,
+    `${baseUrl}${config.endpoints.backUploadUrl}?fileName=${encodeURIComponent(jpegFileName)}&fileSize=${jpegSize}&contentType=image/jpeg`,
     null,
     { headers: createAuthHeaders(aliceToken) }
   );
@@ -293,7 +293,7 @@ export default function(data) {
   });
 
   const jpegConfirmRes = http.post(
-    `${baseUrl}${config.endpoints.confirmUpload(jpegData.fileId)}`,
+    `${baseUrl}${config.endpoints.backConfirmUpload(jpegData.fileId)}`,
     '',
     { headers: createAuthHeaders(aliceToken) }
   );
@@ -314,7 +314,7 @@ export default function(data) {
   const gifFileName = 'test-' + Date.now() + '.gif';
   const gifSize = 102400; // 100 KB
   const gifUploadUrlRes = http.post(
-    `${baseUrl}${config.endpoints.uploadUrl}?fileName=${encodeURIComponent(gifFileName)}&fileSize=${gifSize}&contentType=image/gif`,
+    `${baseUrl}${config.endpoints.backUploadUrl}?fileName=${encodeURIComponent(gifFileName)}&fileSize=${gifSize}&contentType=image/gif`,
     null,
     { headers: createAuthHeaders(aliceToken) }
   );
@@ -351,7 +351,7 @@ export default function(data) {
   });
 
   const gifConfirmRes = http.post(
-    `${baseUrl}${config.endpoints.confirmUpload(gifData.fileId)}`,
+    `${baseUrl}${config.endpoints.backConfirmUpload(gifData.fileId)}`,
     '',
     { headers: createAuthHeaders(aliceToken) }
   );
@@ -372,7 +372,7 @@ export default function(data) {
   const webpFileName = 'test-' + Date.now() + '.webp';
   const webpSize = 153600; // 150 KB
   const webpUploadUrlRes = http.post(
-    `${baseUrl}${config.endpoints.uploadUrl}?fileName=${encodeURIComponent(webpFileName)}&fileSize=${webpSize}&contentType=image/webp`,
+    `${baseUrl}${config.endpoints.backUploadUrl}?fileName=${encodeURIComponent(webpFileName)}&fileSize=${webpSize}&contentType=image/webp`,
     null,
     { headers: createAuthHeaders(aliceToken) }
   );
@@ -411,7 +411,7 @@ export default function(data) {
   });
 
   const webpConfirmRes = http.post(
-    `${baseUrl}${config.endpoints.confirmUpload(webpData.fileId)}`,
+    `${baseUrl}${config.endpoints.backConfirmUpload(webpData.fileId)}`,
     '',
     { headers: createAuthHeaders(aliceToken) }
   );
@@ -429,7 +429,7 @@ export default function(data) {
 
   const fakeFileId = generateUUID();
   const fakeFileRes = http.get(
-    `${baseUrl}${config.endpoints.downloadUrl(fakeFileId)}`,
+    `${baseUrl}${config.endpoints.frontDownloadUrl(fakeFileId)}`,
     { headers: createAuthHeaders(aliceToken) }
   );
 
@@ -445,7 +445,7 @@ export default function(data) {
   console.log('\n=== Test 11: Unauthorized access ===');
 
   const noTokenRes = http.post(
-    `${baseUrl}${config.endpoints.uploadUrl}?fileName=test.png&fileSize=1024&contentType=image/png`,
+    `${baseUrl}${config.endpoints.backUploadUrl}?fileName=test.png&fileSize=1024&contentType=image/png`,
     null
   );
 
@@ -461,7 +461,7 @@ export default function(data) {
   console.log('\n=== Test 12: Database verification ===');
 
   const downloadUrlRes12 = http.get(
-    `${baseUrl}${config.endpoints.downloadUrl(uploadedFileId)}`,
+    `${baseUrl}${config.endpoints.frontDownloadUrl(uploadedFileId)}`,
     { headers: createAuthHeaders(aliceToken) }
   );
 

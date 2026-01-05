@@ -11,7 +11,7 @@ import tech.limaxs.chat.infra.auth.JwtPrincipal;
 
 import java.util.UUID;
 
-@Path("/api/admin")
+@Path("/api/back/admin")
 @RunOnVirtualThread
 @ApplicationScoped
 public class AdminResource {

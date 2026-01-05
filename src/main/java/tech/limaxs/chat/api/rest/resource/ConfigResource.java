@@ -14,7 +14,7 @@ import java.util.List;
 /**
  * Configuration endpoints for client applications.
  */
-@Path("/api/config")
+@Path("/api/front/config")
 @RunOnVirtualThread
 @ApplicationScoped
 public class ConfigResource {

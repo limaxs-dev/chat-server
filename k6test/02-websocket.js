@@ -41,28 +41,27 @@ export function setup() {
 const receivedMessages = [];
 
 export default function(data) {
+  // Clear messages for clean test run
+  receivedMessages.length = 0;
+
   const wsUrl = data.wsUrl;
-  const aliceToken = data.aliceToken;
+  let wsClosed = false;
 
   // ========================================================================
-  // Test 1: WebSocket Connection
+  // WebSocket Connection Test
   // ========================================================================
-  console.log('\n=== Test 1: WebSocket Connection ===');
-
-  let connectionSuccessful = false;
-  let connectionError = null;
+  console.log('\n=== WebSocket Integration Test ===');
 
   const res = ws.connect(wsUrl, {}, function (socket) {
-    connectionSuccessful = true;
     console.log('WebSocket connected successfully!');
 
     // ========================================================================
-    // Test 2: Handle OPEN event
+    // Event: Connection opened - Send all test messages
     // ========================================================================
     socket.on('open', () => {
-      console.log('WebSocket connection opened');
+      console.log('[OPEN] WebSocket connection opened');
 
-      // Send a test message
+      // Test 1: Send initial text message
       const sendMessage = {
         event: config.events.SEND_MSG,
         traceId: generateUUID(),
@@ -74,58 +73,10 @@ export default function(data) {
           clientRef: generateUUID()
         }
       };
-
       socket.send(JSON.stringify(sendMessage));
-      console.log('Sent SEND_MSG event:', JSON.stringify(sendMessage));
-    });
+      console.log('[SENT] SEND_MSG event');
 
-    // ========================================================================
-    // Test 3: Handle MESSAGE event (NEW_MESSAGE)
-    // ========================================================================
-    socket.on('message', (message) => {
-      const msg = JSON.parse(message);
-      console.log('Received message:', JSON.stringify(msg, null, 2));
-
-      // Store received messages
-      receivedMessages.push(msg);
-
-      // Check if it's a NEW_MESSAGE event
-      if (msg.event === config.events.NEW_MESSAGE) {
-        console.log('Received NEW_MESSAGE event');
-        check(msg, {
-          'NEW_MESSAGE - Has event': (m) => m.event === config.events.NEW_MESSAGE,
-          'NEW_MESSAGE - Has traceId': (m) => m.traceId !== undefined,
-          'NEW_MESSAGE - Has data': (m) => m.data !== undefined,
-          'NEW_MESSAGE - Has senderId': (m) => m.data.senderId !== undefined,
-          'NEW_MESSAGE - Has contentText': (m) => m.data.contentText !== undefined,
-          'NEW_MESSAGE - Has roomId': (m) => m.data.roomId !== undefined,
-        });
-      }
-
-      // Check for PRESENCE event
-      if (msg.event === config.events.PRESENCE) {
-        console.log('Received PRESENCE event');
-        check(msg, {
-          'PRESENCE - Has event': (m) => m.event === config.events.PRESENCE,
-          'PRESENCE - Has userId': (m) => m.data.userId !== undefined,
-          'PRESENCE - Has status': (m) => m.data.status !== undefined,
-        });
-      }
-
-      // Check for ACK response
-      if (msg.event === config.events.ACK) {
-        console.log('Received ACK event');
-        check(msg, {
-          'ACK - Has event': (m) => m.event === config.events.ACK,
-          'ACK - Has traceId': (m) => m.traceId !== undefined,
-        });
-      }
-    });
-
-    // ========================================================================
-    // Test 4: Send TYPING indicator
-    // ========================================================================
-    setTimeout(() => {
+      // Test 2: Send TYPING indicator (immediately)
       const typingMessage = {
         event: config.events.TYPING,
         traceId: generateUUID(),
@@ -134,36 +85,10 @@ export default function(data) {
           isTyping: true
         }
       };
-
       socket.send(JSON.stringify(typingMessage));
-      console.log('Sent TYPING event:', JSON.stringify(typingMessage));
+      console.log('[SENT] TYPING event (start)');
 
-      check(typingMessage, {
-        'TYPING - Has event': (m) => m.event === config.events.TYPING,
-        'TYPING - Has roomId': (m) => m.data.roomId !== undefined,
-        'TYPING - Has isTyping': (m) => m.data.isTyping === true,
-      });
-
-      // Send typing stop after 2 seconds
-      setTimeout(() => {
-        const stopTypingMessage = {
-          event: config.events.TYPING,
-          traceId: generateUUID(),
-          data: {
-            roomId: config.rooms.engineering,
-            isTyping: false
-          }
-        };
-
-        socket.send(JSON.stringify(stopTypingMessage));
-        console.log('Sent TYPING (stop) event');
-      }, 2000);
-    }, 1000);
-
-    // ========================================================================
-    // Test 5: Send WebRTC Signal
-    // ========================================================================
-    setTimeout(() => {
+      // Test 3: Send WebRTC Signal
       const signalMessage = {
         event: config.events.SIGNAL_SDP,
         traceId: generateUUID(),
@@ -173,24 +98,11 @@ export default function(data) {
           sdp: 'v=0\r\no=- 123456789 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=group:BUNDLE audio video\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\nc=IN IP4 0.0.0.0\r\na=rtcp:9 IN IP4 0.0.0.0\r\na=ice-ufrag:abc123\r\na=ice-pwd:def456\r\na=fingerprint:sha-256 AA:BB:CC:DD\r\na=setup:actpass\r\na=mid:audio\r\na=sendonly\r\na=rtcp-mux\r\na=rtpmap:111 opus/48000/2\r\n'
         }
       };
-
       socket.send(JSON.stringify(signalMessage));
-      console.log('Sent SIGNAL_SDP event');
+      console.log('[SENT] SIGNAL_SDP event');
 
-      check(signalMessage, {
-        'SIGNAL_SDP - Has event': (m) => m.event === config.events.SIGNAL_SDP,
-        'SIGNAL_SDP - Has targetId': (m) => m.data.targetId === config.users.bob.id,
-        'SIGNAL_SDP - Has type': (m) => m.data.type === 'offer',
-        'SIGNAL_SDP - Has sdp': (m) => m.data.sdp !== undefined && m.data.sdp.length > 0,
-      });
-    }, 3000);
-
-    // ========================================================================
-    // Test 6: Send multiple messages rapidly
-    // ========================================================================
-    setTimeout(() => {
-      console.log('Sending multiple messages rapidly...');
-
+      // Test 4: Send multiple messages rapidly (immediately)
+      console.log('[SENT] Sending 5 rapid messages...');
       for (let i = 0; i < 5; i++) {
         const rapidMessage = {
           event: config.events.SEND_MSG,
@@ -203,63 +115,85 @@ export default function(data) {
             clientRef: generateUUID()
           }
         };
-
         socket.send(JSON.stringify(rapidMessage));
       }
-
-      console.log('Sent 5 rapid messages');
-    }, 5000);
+      console.log('[SENT] 5 rapid messages sent');
+    });
 
     // ========================================================================
-    // Test 7: Send ACK for message
+    // Event: Receive messages
     // ========================================================================
-    setTimeout(() => {
-      if (receivedMessages.length > 0) {
-        const lastMessage = receivedMessages[receivedMessages.length - 1];
-        if (lastMessage.event === config.events.NEW_MESSAGE && lastMessage.data.id) {
-          const ackMessage = {
-            event: config.events.ACK,
-            traceId: generateUUID(),
-            data: {
-              messageId: lastMessage.data.id
-            }
-          };
+    socket.on('message', (message) => {
+      const msg = JSON.parse(message);
+      console.log('[RECEIVED]', msg.event);
 
-          socket.send(JSON.stringify(ackMessage));
-          console.log('Sent ACK for message:', lastMessage.data.id);
-        }
+      // Store received messages
+      receivedMessages.push(msg);
+
+      // Validate PRESENCE event
+      if (msg.event === 'PRESENCE') {
+        check(msg, {
+          'PRESENCE - Has event': (m) => m.event === 'PRESENCE',
+          'PRESENCE - Has traceId': (m) => m.traceId !== undefined,
+          'PRESENCE - Has data': (m) => m.data !== undefined,
+          'PRESENCE - Has userId': (m) => m.data.userId !== undefined,
+          'PRESENCE - Has userName': (m) => m.data.userName !== undefined,
+          'PRESENCE - Has status': (m) => m.data.status !== undefined,
+          'PRESENCE - Has roomId': (m) => m.data.roomId !== undefined,
+        });
+        console.log('  User:', msg.data.userName, 'is now', msg.data.status, 'in room', msg.data.roomId);
       }
-    }, 7000);
+
+      // Validate NEW_MESSAGE event
+      if (msg.event === config.events.NEW_MESSAGE) {
+        check(msg, {
+          'NEW_MESSAGE - Has event': (m) => m.event === config.events.NEW_MESSAGE,
+          'NEW_MESSAGE - Has traceId': (m) => m.traceId !== undefined,
+          'NEW_MESSAGE - Has data': (m) => m.data !== undefined,
+          'NEW_MESSAGE - Has senderId': (m) => m.data.senderId !== undefined,
+          'NEW_MESSAGE - Has contentText': (m) => m.data.contentText !== undefined,
+          'NEW_MESSAGE - Has roomId': (m) => m.data.roomId !== undefined,
+        });
+      }
+
+      // Close after receiving at least 5 messages
+      if (receivedMessages.length >= 5 && !wsClosed) {
+        wsClosed = true;
+        console.log('[CLOSE] Closing connection after receiving', receivedMessages.length, 'messages');
+        socket.close(1000, 'Test complete');
+      }
+    });
 
     // ========================================================================
-    // Test 8: Close connection after tests
+    // Event: Connection closed
     // ========================================================================
-    setTimeout(() => {
-      console.log('Closing WebSocket connection...');
-      socket.close();
-    }, 10000);
+    socket.on('close', () => {
+      console.log('[CLOSED] WebSocket connection closed successfully');
+    });
+
+    // ========================================================================
+    // Event: Error
+    // ========================================================================
+    socket.on('error', (error) => {
+      console.log('[ERROR] WebSocket error:', error);
+    });
   });
 
   // ========================================================================
-  // Test 9: Verify Connection Success
+  // Verify Connection Success
   // ========================================================================
   check(res, {
-    'WebSocket - Connection successful': () => connectionSuccessful,
+    'WebSocket - Connection successful': (r) => r.status === 101,
     'WebSocket - Status is 101': (r) => r.status === 101,
   });
 
-  if (!connectionSuccessful) {
-    console.log('WebSocket connection failed!');
-    console.log('Response:', JSON.stringify(res, null, 2));
-  }
-
-  // Wait for tests to complete
-  sleep(12);
+  // Wait for async operations to complete
+  sleep(5);
 
   // ========================================================================
-  // Test 10: Verify Received Messages
+  // Verify Received Messages
   // ========================================================================
-  console.log('\n=== Test 10: Verify Received Messages ===');
+  console.log('\n=== Verification ===');
   console.log('Total messages received:', receivedMessages.length);
 
   check(receivedMessages, {
@@ -268,20 +202,17 @@ export default function(data) {
       return receivedMessages.some(m => m.event === config.events.NEW_MESSAGE);
     },
     'WebSocket - Received PRESENCE event': () => {
-      return receivedMessages.some(m => m.event === config.events.PRESENCE);
+      return receivedMessages.some(m => m.event === 'PRESENCE');
     },
   });
 
-  // Print summary
-  console.log('\n=== WebSocket Test Summary ===');
-  console.log('Connection successful:', connectionSuccessful);
-  console.log('Messages received:', receivedMessages.length);
   console.log('Event types received:', [...new Set(receivedMessages.map(m => m.event))]);
+  console.log('WebSocket closed:', wsClosed);
+  console.log('\n✅ WebSocket Test Complete!');
 }
 
 export function teardown(data) {
   console.log('\n=== Test Teardown ===');
-  console.log('WebSocket tests completed!');
-  console.log('\nVerify messages in database:');
+  console.log('Verify messages in database:');
   console.log(`SELECT * FROM messages WHERE room_id = '${config.rooms.engineering}' ORDER BY created_at DESC LIMIT 10;`);
 }

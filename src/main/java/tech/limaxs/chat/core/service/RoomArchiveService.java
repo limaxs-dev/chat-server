@@ -72,7 +72,6 @@ public class RoomArchiveService {
         // Extract data we need before detaching
         String roomType = room.getType().name();
         String roomName = room.getName();
-        String roomTenantId = room.getTenantId();
         UUID roomUuid = room.getId();
 
         // Clear entity references to avoid cascade issues
@@ -84,7 +83,6 @@ public class RoomArchiveService {
         archivedRoom.setOriginalRoomId(roomUuid);
         archivedRoom.setType(roomType);
         archivedRoom.setName(roomName);
-        archivedRoom.setTenantId(roomTenantId);
         archivedRoom.setParticipantCount(participants.size());
         archivedRoom.setMessageCount(messages.size());
         archivedRoom.setFirstMessageAt(firstMessageAt);

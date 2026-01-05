@@ -15,7 +15,6 @@ import jakarta.inject.Inject;
 import io.vertx.mutiny.pgclient.PgPool;
 import io.vertx.mutiny.sqlclient.Tuple;
 import tech.limaxs.chat.api.websocket.dto.*;
-import tech.limaxs.chat.core.repository.reactive.ReactiveRoomParticipantRepository;
 import tech.limaxs.chat.infra.redis.RedisService;
 
 import java.util.Map;
@@ -35,9 +34,6 @@ public class ChatWebSocketHandler {
 
     @Inject
     RedisService redisService;
-
-    @Inject
-    ReactiveRoomParticipantRepository roomParticipantRepository;
 
     @Inject
     PgPool pgPool;
@@ -64,18 +60,17 @@ public class ChatWebSocketHandler {
             io.jsonwebtoken.Claims claims = jws.getPayload();
 
             UUID userId = UUID.fromString(claims.getSubject());
-            String tenantId = claims.get("tenantId", String.class);
             String name = claims.get("name", String.class);
 
-            UserSession session = new UserSession(userId, tenantId, name);
+            UserSession session = new UserSession(userId, name);
             sessions.put(connection.id(), session);
             userConnections.put(userId, connection);
 
             LOG.info("WebSocket opened for user: " + userId + " (" + name + ")");
 
-            sendPresenceEvent(connection, userId, name, true);
-
-            return redisService.updatePresence(userId)
+            // Setup connection and broadcast presence
+            return Uni.createFrom().voidItem()
+                    .chain(() -> redisService.updatePresence(userId))
                     .invoke(() -> LOG.info("Presence updated for user: " + userId))
                     .chain(() -> loadUserRooms(userId, connection))
                     .replaceWithVoid();
@@ -107,20 +102,91 @@ public class ChatWebSocketHandler {
     }
 
     private Uni<Void> loadUserRooms(UUID userId, WebSocketConnection connection) {
-        return roomParticipantRepository.findByUserId(userId)
-                .invoke(participants -> {
-                    LOG.info("User " + userId + " is in " + participants.size() + " rooms");
-                    for (var participant : participants) {
-                        UUID roomId = participant.getId().getRoomId();
+        UserSession userSession = getSession(connection);
+        String name = userSession != null ? userSession.name : "Unknown";
+
+        // Use pgPool directly to avoid Hibernate Reactive session requirement
+        String sql = "SELECT room_id FROM room_participants WHERE user_id = $1";
+        return pgPool.preparedQuery(sql).execute(io.vertx.mutiny.sqlclient.Tuple.of(userId))
+                .onItem().transform(rowSet -> {
+                    LOG.info("User " + userId + " is in " + rowSet.size() + " rooms");
+                    return rowSet;
+                })
+                .invoke(rowSet -> {
+                    for (var row : rowSet) {
+                        UUID roomId = row.getUUID("room_id");
                         roomConnections.computeIfAbsent(roomId, k -> new ConcurrentHashMap<>())
                                 .put(connection.id(), connection);
                         LOG.info("Added connection to room: " + roomId);
+
+                        // Send PRESENCE event directly to this connection immediately
+                        String presenceEvent = createPresenceEvent(userId, name, true, roomId);
+                        try {
+                            connection.sendText(presenceEvent);
+                            LOG.info("Sent PRESENCE event directly to connection for room: " + roomId);
+                        } catch (Exception e) {
+                            LOG.warning("Failed to send PRESENCE to connection: " + e.getMessage());
+                        }
                     }
+                })
+                .call(rowSet -> {
+                    // Broadcast online presence to all rooms user is in via Redis (for other users)
+                    if (rowSet.size() == 0) {
+                        return Uni.createFrom().voidItem();
+                    }
+
+                    Uni<Void> uni = Uni.createFrom().voidItem();
+                    for (var row : rowSet) {
+                        UUID roomId = row.getUUID("room_id");
+                        String presenceEvent = createPresenceEvent(userId, name, true, roomId);
+                        uni = uni.chain(() -> {
+                            LOG.info("Publishing PRESENCE to room: " + roomId);
+                            return redisService.publishPresence(roomId, presenceEvent);
+                        });
+                    }
+                    return uni;
                 })
                 .replaceWithVoid();
     }
 
-    private void sendPresenceEvent(WebSocketConnection connection, UUID userId, String name, boolean online) {
+    /**
+     * Broadcast presence event to all rooms the user is in via Redis pub/sub.
+     * This ensures presence events are delivered to all connected clients across all server instances.
+     */
+    private Uni<Void> broadcastPresenceToRooms(UUID userId, String name, boolean online) {
+        LOG.info("Broadcasting PRESENCE event for user " + userId + " (" + name + ") status=" + (online ? "online" : "offline"));
+
+        // Use pgPool directly to avoid Hibernate Reactive session requirement
+        String sql = "SELECT room_id FROM room_participants WHERE user_id = $1";
+        return pgPool.preparedQuery(sql).execute(io.vertx.mutiny.sqlclient.Tuple.of(userId))
+                .onItem().transform(rowSet -> {
+                    LOG.info("User " + userId + " is in " + rowSet.size() + " rooms for PRESENCE broadcast");
+                    return rowSet;
+                })
+                .call(rowSet -> {
+                    if (rowSet.size() == 0) {
+                        return Uni.createFrom().voidItem();
+                    }
+                    LOG.info("Broadcasting to " + rowSet.size() + " rooms");
+
+                    Uni<Void> uni = Uni.createFrom().voidItem();
+                    for (var row : rowSet) {
+                        UUID roomId = row.getUUID("room_id");
+                        String presenceEvent = createPresenceEvent(userId, name, online, roomId);
+                        uni = uni.chain(() -> {
+                            LOG.info("Publishing PRESENCE to room: " + roomId);
+                            return redisService.publishPresence(roomId, presenceEvent);
+                        });
+                    }
+                    return uni;
+                })
+                .replaceWithVoid();
+    }
+
+    /**
+     * Create a PRESENCE event JSON string.
+     */
+    private String createPresenceEvent(UUID userId, String name, boolean online, UUID roomId) {
         try {
             ObjectNode eventNode = objectMapper.createObjectNode();
             eventNode.put("event", "PRESENCE");
@@ -130,11 +196,13 @@ public class ChatWebSocketHandler {
             dataNode.put("userId", userId.toString());
             dataNode.put("userName", name);
             dataNode.put("status", online ? "online" : "offline");
+            dataNode.put("roomId", roomId.toString());
 
             eventNode.set("data", dataNode);
-            connection.sendText(objectMapper.writeValueAsString(eventNode));
+            return objectMapper.writeValueAsString(eventNode);
         } catch (Exception e) {
-            LOG.warning("Failed to send presence event: " + e.getMessage());
+            LOG.severe("Error creating PRESENCE event: " + e.getMessage());
+            return "{}";
         }
     }
 
@@ -182,18 +250,18 @@ public class ChatWebSocketHandler {
 
             switch (eventType) {
                 case "SEND_MSG":
-                    return handleSendMessage(data, userId, session.tenantId, connection);
+                    return handleSendMessage(data, userId, connection);
 
                 case "TYPING":
-                    return handleTyping(data, userId, session.tenantId, connection)
+                    return handleTyping(data, userId, connection)
                             .replaceWith("{\"status\":\"typing_processed\"}");
 
                 case "SIGNAL_SDP":
-                    return handleWebRTCSignal(data, userId, session.tenantId, connection)
+                    return handleWebRTCSignal(data, userId, connection)
                             .replaceWith("{\"status\":\"signal_processed\"}");
 
                 case "SIGNAL_ICE":
-                    return handleSignalIce(data, userId, session.tenantId, connection)
+                    return handleSignalIce(data, userId, connection)
                             .replaceWith("{\"status\":\"ice_processed\"}");
 
                 case "ACK":
@@ -211,7 +279,7 @@ public class ChatWebSocketHandler {
         }
     }
 
-    private Uni<String> handleSendMessage(JsonNode data, UUID userId, String tenantId, WebSocketConnection connection) {
+    private Uni<String> handleSendMessage(JsonNode data, UUID userId, WebSocketConnection connection) {
         try {
             if (data == null) {
                 LOG.warning("SEND_MSG: data is null");
@@ -288,7 +356,7 @@ public class ChatWebSocketHandler {
         }
     }
 
-    private Uni<Void> handleTyping(JsonNode data, UUID userId, String tenantId, WebSocketConnection connection) {
+    private Uni<Void> handleTyping(JsonNode data, UUID userId, WebSocketConnection connection) {
         try {
             UUID roomId = data.has("roomId") ? UUID.fromString(data.get("roomId").asText()) : null;
             boolean isTyping = data.has("isTyping") ? data.get("isTyping").asBoolean() : false;
@@ -309,7 +377,7 @@ public class ChatWebSocketHandler {
         }
     }
 
-    private Uni<Void> handleWebRTCSignal(JsonNode data, UUID userId, String tenantId, WebSocketConnection connection) {
+    private Uni<Void> handleWebRTCSignal(JsonNode data, UUID userId, WebSocketConnection connection) {
         try {
             UUID targetId = data.has("targetId") ? UUID.fromString(data.get("targetId").asText()) : null;
             String type = data.has("type") ? data.get("type").asText() : null;
@@ -337,7 +405,7 @@ public class ChatWebSocketHandler {
         }
     }
 
-    private Uni<Void> handleSignalIce(JsonNode data, UUID userId, String tenantId, WebSocketConnection connection) {
+    private Uni<Void> handleSignalIce(JsonNode data, UUID userId, WebSocketConnection connection) {
         try {
             UUID targetId = data.has("targetId") ? UUID.fromString(data.get("targetId").asText()) : null;
             String candidate = data.has("candidate") ? data.get("candidate").asText() : null;
@@ -425,10 +493,39 @@ public class ChatWebSocketHandler {
         if (session != null) {
             UUID userId = session.userId;
             userConnections.remove(userId, connection);
+
+            // Get rooms this connection was in before removing
+            var roomsIn = new java.util.ArrayList<UUID>();
+            for (var entry : roomConnections.entrySet()) {
+                if (entry.getValue().containsKey(connection.id())) {
+                    roomsIn.add(entry.getKey());
+                }
+            }
+
+            // Remove connection from all rooms
             for (Map<String, WebSocketConnection> roomMap : roomConnections.values()) {
                 roomMap.remove(connection.id());
             }
             LOG.info("WebSocket closed for user: " + userId);
+
+            // Send offline PRESENCE event directly to this connection before it closes
+            // This ensures the client knows they're going offline
+            for (UUID roomId : roomsIn) {
+                String presenceEvent = createPresenceEvent(userId, session.name, false, roomId);
+                try {
+                    connection.sendText(presenceEvent);
+                    LOG.info("Sent offline PRESENCE to closing connection for room: " + roomId);
+                } catch (Exception e) {
+                    LOG.warning("Failed to send offline PRESENCE to closing connection: " + e.getMessage());
+                }
+            }
+
+            // Broadcast offline presence to all rooms user is in via Redis (for other users)
+            broadcastPresenceToRooms(userId, session.name, false).subscribe().with(
+                unused -> LOG.info("Offline presence broadcast for user: " + userId),
+                failure -> LOG.warning("Failed to broadcast offline presence: " + failure.getMessage())
+            );
+
             // Clear call state in background (fire and forget)
             redisService.clearCallState(userId).subscribe().with(
                 unused -> {},
@@ -467,5 +564,5 @@ public class ChatWebSocketHandler {
         }
     }
 
-    private static record UserSession(UUID userId, String tenantId, String name) {}
+    private static record UserSession(UUID userId, String name) {}
 }

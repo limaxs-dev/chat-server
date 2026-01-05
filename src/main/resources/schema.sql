@@ -4,7 +4,6 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE TABLE chat_users (
     id UUID PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    tenant_id VARCHAR(50) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -14,11 +13,10 @@ CREATE TABLE rooms (
     type VARCHAR(10) NOT NULL CHECK (type IN ('DIRECT', 'GROUP')),
     name VARCHAR(255),
     last_message_preview TEXT,
-    tenant_id VARCHAR(50) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX idx_rooms_tenant_updated_at ON rooms (tenant_id, updated_at DESC);
+CREATE INDEX idx_rooms_updated_at ON rooms (updated_at DESC);
 
 -- Table: room_participants
 CREATE TABLE room_participants (
@@ -76,7 +74,6 @@ CREATE TABLE archived_rooms (
     original_room_id UUID NOT NULL,
     type VARCHAR(10) NOT NULL,
     name VARCHAR(255),
-    tenant_id VARCHAR(50) NOT NULL,
     participant_count INT NOT NULL DEFAULT 0,
     message_count INT NOT NULL DEFAULT 0,
     first_message_at TIMESTAMPTZ,
@@ -84,7 +81,7 @@ CREATE TABLE archived_rooms (
     archived_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     archived_by VARCHAR(100) NOT NULL
 );
-CREATE INDEX idx_archived_rooms_tenant ON archived_rooms(tenant_id, archived_at DESC);
+CREATE INDEX idx_archived_rooms_archived_at ON archived_rooms(archived_at DESC);
 CREATE INDEX idx_archived_rooms_original ON archived_rooms(original_room_id);
 
 -- Archived messages (read-only audit)

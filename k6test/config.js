@@ -8,38 +8,34 @@ export const config = {
   baseUrl: __ENV.BASE_URL || 'http://localhost:8080',
   wsUrl: __ENV.WS_URL || 'ws://localhost:8080/ws/chat',
 
-  // Test user credentials (from test-data.sql)
+  // Test user credentials
   users: {
     alice: {
       id: '550e8400-e29b-41d4-a716-446655440000',
-      name: 'Alice',
-      tenant: 'test-tenant'
+      name: 'Alice'
     },
     bob: {
       id: '550e8400-e29b-41d4-a716-446655440001',
-      name: 'Bob',
-      tenant: 'test-tenant'
+      name: 'Bob'
     },
     charlie: {
       id: '550e8400-e29b-41d4-a716-446655440002',
-      name: 'Charlie',
-      tenant: 'test-tenant'
+      name: 'Charlie'
     },
     diana: {
       id: '550e8400-e29b-41d4-a716-446655440003',
-      name: 'Diana',
-      tenant: 'test-tenant'
+      name: 'Diana'
     }
   },
 
-  // Test room IDs (from test-data.sql)
+  // Test room IDs
   rooms: {
     engineering: '650e8400-e29b-41d4-a716-446655440000', // GROUP - Engineering Team
     product: '650e8400-e29b-41d4-a716-446655440001',     // GROUP - Product Discussion
     direct: '650e8400-e29b-41d4-a716-446655440002'       // DIRECT - Alice & Bob
   },
 
-  // Test message IDs (from test-data.sql)
+  // Test message IDs
   messages: {
     msg1: '750e8400-e29b-41d4-a716-446655440000',
     msg2: '750e8400-e29b-41d4-a716-446655440001',
@@ -48,14 +44,21 @@ export const config = {
     msg5: '750e8400-e29b-41d4-a716-446655440004'
   },
 
-  // API endpoints
+  // API endpoints - /api/front/* for frontend, /api/back/* for backend
   endpoints: {
     token: '/api/dev/token',
-    rooms: '/api/rooms',
-    messages: '/api/messages',
-    uploadUrl: '/api/files/upload-url',
-    confirmUpload: (fileId) => `/api/files/${fileId}/confirm`,
-    downloadUrl: (fileId) => `/api/files/${fileId}/download-url`
+    // Frontend API (/api/front/*)
+    frontRooms: '/api/front/rooms',
+    frontMessages: '/api/front/messages',
+    frontDownloadUrl: (fileId) => `/api/front/files/${fileId}/download-url`,
+    frontConfig: '/api/front/config/webrtc',
+    // Backend API (/api/back/*)
+    backRooms: '/api/back/rooms',
+    backMessages: '/api/back/messages',
+    backUploadUrl: '/api/back/files/upload-url',
+    backConfirmUpload: (fileId) => `/api/back/files/${fileId}/confirm`,
+    backAdminArchive: (roomId) => `/api/back/admin/archive/${roomId}`,
+    backArchive: '/api/back/archive'
   },
 
   // WebSocket events
@@ -102,7 +105,7 @@ export function generateUUID() {
 // Helper function to get JWT token for a user
 export function getToken(user) {
   const url = `${config.baseUrl}${config.endpoints.token}/${user.id}`;
-  const params = `name=${encodeURIComponent(user.name)}&tenant=${encodeURIComponent(user.tenant)}`;
+  const params = `name=${encodeURIComponent(user.name)}`;
   const res = http.get(`${url}?${params}`);
 
   if (res.status !== 200) {

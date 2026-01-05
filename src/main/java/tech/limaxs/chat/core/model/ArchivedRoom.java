@@ -20,9 +20,6 @@ public class ArchivedRoom {
 
     private String name;
 
-    @Column(name = "tenant_id", nullable = false)
-    private String tenantId;
-
     @Column(name = "participant_count", nullable = false)
     private int participantCount = 0;
 
@@ -81,14 +78,6 @@ public class ArchivedRoom {
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public String getTenantId() {
-        return tenantId;
-    }
-
-    public void setTenantId(String tenantId) {
-        this.tenantId = tenantId;
     }
 
     public int getParticipantCount() {

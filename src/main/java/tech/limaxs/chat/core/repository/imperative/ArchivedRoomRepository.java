@@ -10,17 +10,13 @@ import java.util.UUID;
 @ApplicationScoped
 public class ArchivedRoomRepository implements PanacheRepositoryBase<ArchivedRoom, UUID> {
 
-    public List<ArchivedRoom> findByTenantIdOrderByArchivedAtDesc(String tenantId, int page, int size) {
-        return find("tenantId = ?1 ORDER BY archivedAt DESC", tenantId)
+    public List<ArchivedRoom> findAllOrderByArchivedAtDesc(int page, int size) {
+        return findAll()
                 .page(page, size)
                 .list();
     }
 
     public ArchivedRoom findByOriginalRoomId(UUID originalRoomId) {
         return find("originalRoomId = ?1", originalRoomId).firstResult();
-    }
-
-    public long countByTenantId(String tenantId) {
-        return count("tenantId = ?1", tenantId);
     }
 }
